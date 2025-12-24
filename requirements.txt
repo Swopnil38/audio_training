@@ -1,0 +1,26 @@
+# Django
+Django>=4.2,<5.0
+djangorestframework>=3.14
+django-cors-headers>=4.3
+django-celery-results>=2.5
+
+# Database
+psycopg2-binary>=2.9
+pgvector>=0.2
+
+# Celery
+celery>=5.3
+redis>=5.0
+
+# Whisper & Audio
+openai-whisper>=20231117
+librosa>=0.10
+soundfile>=0.12
+numpy>=1.24
+
+# Embeddings
+sentence-transformers>=2.2
+
+# Utilities
+python-dotenv>=1.0
+gunicorn>=21.0
