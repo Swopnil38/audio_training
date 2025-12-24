@@ -2,8 +2,13 @@
 Django settings for Nepali + English ASR System
 """
 
+
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -57,6 +62,9 @@ TEMPLATES = [
     },
 ]
 
+
+# ASGI application
+ASGI_APPLICATION = 'asr_project.asgi.application'
 WSGI_APPLICATION = 'asr_project.wsgi.application'
 
 # Database - PostgreSQL with pgvector
