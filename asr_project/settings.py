@@ -120,12 +120,22 @@ REST_FRAMEWORK = {
 }
 
 # Celery
-CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/5')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_DEFAULT_QUEUE = 'audio_asr'
+CELERY_TASK_QUEUES = {
+    'audio_asr': {
+        'exchange': 'audio_asr',
+        'routing_key': 'audio_asr',
+    },
+}
+CELERY_TASK_ROUTES = {
+    'asr_app.tasks.*': {'queue': 'audio_asr'},
+}
 
 # Whisper Settings
 WHISPER_MODEL_SIZE = os.environ.get('WHISPER_MODEL_SIZE', 'small')

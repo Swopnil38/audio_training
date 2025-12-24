@@ -14,7 +14,7 @@ router.register(r'jobs', views.TranscriptionJobViewSet, basename='jobs')
 urlpatterns = [
     # Template views
     path('', views.UploadView.as_view(), name='upload'),
-    path('list/', views.AudioListView.as_view(), name='audio-list'),
+    path('list/', views.AudioListView.as_view(), name='audiofile-list'),
     path('editor/<uuid:audio_id>/', views.EditorView.as_view(), name='editor'),
     
     # API endpoints
