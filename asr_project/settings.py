@@ -139,6 +139,7 @@ CELERY_TASK_ROUTES = {
 
 # Whisper Settings
 WHISPER_MODEL_SIZE = os.environ.get('WHISPER_MODEL_SIZE', 'small')
+WHISPER_MODEL_ID = os.environ.get('WHISPER_MODEL_ID', '/home/docker/audio_training/models/whisper-small-nepali')
 WHISPER_DEVICE = os.environ.get('WHISPER_DEVICE', 'cuda')  # 'cuda' or 'cpu'
 
 # Audio Processing
