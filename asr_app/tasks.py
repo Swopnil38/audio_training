@@ -1,9 +1,11 @@
 """
-Celery tasks for ASR processing
+Celery tasks for ASR processing - Using Fine-tuned Nepali Whisper
 """
 
 import os
 import logging
+import torch
+import librosa
 from celery import shared_task
 from celery.signals import worker_process_init
 from django.conf import settings
@@ -13,40 +15,102 @@ logger = logging.getLogger(__name__)
 
 # Global model cache
 _whisper_model = None
+_whisper_processor = None
 
 
 @worker_process_init.connect
 def preload_whisper_model(**kwargs):
     """Load Whisper model when worker starts"""
-    global _whisper_model
+    global _whisper_model, _whisper_processor
     
-    import whisper
+    from transformers import WhisperProcessor, WhisperForConditionalGeneration
     
-    model_size = getattr(settings, 'WHISPER_MODEL_SIZE', 'small')
+    model_id = getattr(settings, 'WHISPER_MODEL_ID', 'Dragneel/whisper-small-nepali')
     device = getattr(settings, 'WHISPER_DEVICE', 'cpu')
     
-    logger.info(f"Preloading Whisper model: {model_size} on {device}")
-    _whisper_model = whisper.load_model(model_size, device=device)
+    logger.info(f"Preloading Whisper model: {model_id} on {device}")
+    
+    _whisper_processor = WhisperProcessor.from_pretrained(model_id)
+    _whisper_model = WhisperForConditionalGeneration.from_pretrained(model_id)
+    _whisper_model.to(device)
+    
     logger.info("Whisper model loaded successfully!")
 
 
 def get_whisper_model():
     """Get cached model or load if not available"""
-    global _whisper_model
+    global _whisper_model, _whisper_processor
     
-    if _whisper_model is None:
-        import whisper
-        model_size = getattr(settings, 'WHISPER_MODEL_SIZE', 'small')
+    if _whisper_model is None or _whisper_processor is None:
+        from transformers import WhisperProcessor, WhisperForConditionalGeneration
+        
+        model_id = getattr(settings, 'WHISPER_MODEL_ID', 'Dragneel/whisper-small-nepali')
         device = getattr(settings, 'WHISPER_DEVICE', 'cpu')
-        _whisper_model = whisper.load_model(model_size, device=device)
+        
+        _whisper_processor = WhisperProcessor.from_pretrained(model_id)
+        _whisper_model = WhisperForConditionalGeneration.from_pretrained(model_id)
+        _whisper_model.to(device)
     
-    return _whisper_model
+    return _whisper_model, _whisper_processor
+
+
+def transcribe_audio(audio_path: str) -> dict:
+    """Transcribe audio using fine-tuned Nepali Whisper"""
+    
+    model, processor = get_whisper_model()
+    device = getattr(settings, 'WHISPER_DEVICE', 'cpu')
+    
+    # Load audio
+    audio, sr = librosa.load(audio_path, sr=16000)
+    duration = len(audio) / sr
+    
+    # Process in chunks for long audio (30 sec chunks)
+    chunk_length = 30 * sr  # 30 seconds
+    segments = []
+    
+    for i in range(0, len(audio), chunk_length):
+        chunk = audio[i:i + chunk_length]
+        start_time = i / sr
+        end_time = min((i + chunk_length) / sr, duration)
+        
+        # Prepare input
+        input_features = processor(
+            chunk, 
+            sampling_rate=16000, 
+            return_tensors="pt"
+        ).input_features.to(device)
+        
+        # Generate
+        with torch.no_grad():
+            predicted_ids = model.generate(
+                input_features,
+                max_length=448,
+                num_beams=5,
+                language="ne",  # Nepali
+                task="transcribe"
+            )
+        
+        # Decode
+        text = processor.batch_decode(predicted_ids, skip_special_tokens=True)[0]
+        
+        if text.strip():
+            segments.append({
+                'start': start_time,
+                'end': end_time,
+                'text': text.strip()
+            })
+    
+    return {
+        'segments': segments,
+        'language': 'ne',
+        'duration': duration
+    }
 
 
 @shared_task(bind=True, max_retries=3)
 def transcribe_audio_task(self, audio_file_id: str, job_id: str):
     """
-    Transcribe audio file using local Whisper model
+    Transcribe audio file using fine-tuned Nepali Whisper model
     """
     from .models import AudioFile, TranscriptSegment, TranscriptionJob
     
@@ -60,24 +124,14 @@ def transcribe_audio_task(self, audio_file_id: str, job_id: str):
         
         logger.info(f"Starting transcription for {audio_file.original_filename}")
         
-        # Get cached model
-        model = get_whisper_model()
-        
         audio_path = audio_file.file.path
-        
         logger.info(f"Transcribing: {audio_path}")
-        result = model.transcribe(
-            audio_path,
-            language=None,
-            task='transcribe',
-            verbose=False,
-            word_timestamps=True,
-        )
         
-        # Get audio duration
-        import librosa
-        audio_duration = librosa.get_duration(path=audio_path)
-        audio_file.duration_seconds = audio_duration
+        # Transcribe
+        result = transcribe_audio(audio_path)
+        
+        # Update duration
+        audio_file.duration_seconds = result['duration']
         
         # Create segments
         segments_created = 0
@@ -86,10 +140,8 @@ def transcribe_audio_task(self, audio_file_id: str, job_id: str):
                 audio_file=audio_file,
                 start_time=segment['start'],
                 end_time=segment['end'],
-                text=segment['text'].strip(),
-                confidence=segment.get('avg_logprob'),
-                no_speech_prob=segment.get('no_speech_prob'),
-                language=result.get('language', ''),
+                text=segment['text'],
+                language=result.get('language', 'ne'),
             )
             segments_created += 1
         
@@ -103,7 +155,7 @@ def transcribe_audio_task(self, audio_file_id: str, job_id: str):
         job.result = {
             'language': result.get('language'),
             'segments_count': segments_created,
-            'duration': audio_duration,
+            'duration': result['duration'],
         }
         job.save()
         
@@ -133,3 +185,27 @@ def transcribe_audio_task(self, audio_file_id: str, job_id: str):
             pass
         
         raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
+
+
+@shared_task
+def generate_embeddings_task(segment_id: str):
+    """Generate embeddings for a transcript segment"""
+    from .models import TranscriptSegment
+    from sentence_transformers import SentenceTransformer
+    
+    try:
+        segment = TranscriptSegment.objects.get(id=segment_id)
+        model = SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+        
+        text = segment.final_text
+        embedding = model.encode(text)
+        
+        segment.embedding = embedding.tolist()
+        segment.save()
+        
+        logger.info(f"Generated embedding for segment {segment_id}")
+        return {'status': 'success', 'segment_id': str(segment_id)}
+        
+    except Exception as e:
+        logger.error(f"Embedding generation failed: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
