@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     # Local
     'asr_app',
+    'training',
 ]
 
 MIDDLEWARE = [

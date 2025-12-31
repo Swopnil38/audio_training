@@ -21,6 +21,20 @@ numpy>=1.24
 # Embeddings
 sentence-transformers>=2.2
 
+# LoRA Fine-tuning
+transformers>=4.35.0
+peft>=0.7.0
+datasets>=2.14.0
+accelerate>=0.24.0
+torch>=2.1.0
+
+# Evaluation Metrics
+jiwer>=3.0.0
+
+# Model Export
+ctranslate2>=3.20.0
+faster-whisper>=0.9.0
+
 # Utilities
 python-dotenv>=1.0
 gunicorn>=21.0
