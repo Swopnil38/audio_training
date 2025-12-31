@@ -7,7 +7,7 @@ import re
 import unicodedata
 from typing import Dict, List, Tuple
 
-from jiwer import wer, cer, compute_measures
+from jiwer import wer, cer
 
 
 class NepaliTextNormalizer:
@@ -86,19 +86,13 @@ def compute_wer(reference: str, hypothesis: str, normalize: bool = True) -> Dict
     if not reference:
         return {
             'wer': 1.0 if hypothesis else 0.0,
-            'insertions': 0,
-            'deletions': 0,
-            'substitutions': 0,
         }
 
-    # Compute measures
-    measures = compute_measures(reference, hypothesis)
+    # Compute WER
+    wer_score = wer(reference, hypothesis)
 
     return {
-        'wer': measures['wer'],
-        'insertions': measures['insertions'],
-        'deletions': measures['deletions'],
-        'substitutions': measures['substitutions'],
+        'wer': wer_score,
     }
 
 
