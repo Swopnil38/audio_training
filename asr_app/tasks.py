@@ -16,10 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 
-def get_whisper_model():
-
-
-
 
 def transcribe_audio(audio_path: str) -> dict:
     """Transcribe audio using Azure OpenAI API"""
