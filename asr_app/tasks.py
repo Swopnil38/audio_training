@@ -35,6 +35,7 @@ def transcribe_audio(audio_path: str) -> dict:
         audio_data = f.read()
 
     # Transcribe using ElevenLabs SDK
+
     transcription = elevenlabs.speech_to_text.convert(
         file=BytesIO(audio_data),
         model_id="scribe_v2",
@@ -43,8 +44,9 @@ def transcribe_audio(audio_path: str) -> dict:
         diarize=True,
     )
 
-    text = transcription.get("text", "")
-    language = transcription.get("language_code", "unknown")
+    # The SDK returns a SpeechToTextChunkResponseModel object, not a dict
+    text = getattr(transcription, "text", "")
+    language = getattr(transcription, "language_code", "unknown")
 
     # Use librosa to get duration
     audio, sr = librosa.load(audio_path, sr=16000)
