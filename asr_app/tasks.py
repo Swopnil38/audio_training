@@ -19,25 +19,35 @@ logger = logging.getLogger(__name__)
 
 def transcribe_audio(audio_path: str) -> dict:
     """Transcribe audio using Hugging Face wav2vec2-xlsr-nepali model"""
-    from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
-    import torch
+    import requests
     import os
-    # Path to local model directory (adjust if needed)
-    LOCAL_MODEL_DIR = os.path.join(os.path.dirname(__file__), '..', 'models', 'wav2vec2-xlsr-nepali')
-    processor = Wav2Vec2Processor.from_pretrained(LOCAL_MODEL_DIR)
-    model = Wav2Vec2ForCTC.from_pretrained(LOCAL_MODEL_DIR)
+    import librosa
+    ELEVEN_API_KEY = os.getenv("ELEVEN_API_KEY")
+    ELEVEN_API_URL = "https://api.elevenlabs.io/v1/speech-to-text"
 
     # Load audio
     audio, sr = librosa.load(audio_path, sr=16000)
-    input_values = processor(audio, return_tensors="pt", sampling_rate=16000).input_values
-
-    # Perform inference
-    with torch.no_grad():
-        logits = model(input_values).logits
-    predicted_ids = torch.argmax(logits, dim=-1)
-    transcription = processor.batch_decode(predicted_ids)[0]
-
     duration = len(audio) / sr
+
+    # Save audio to temp wav file
+    import tempfile
+    import soundfile as sf
+    with tempfile.NamedTemporaryFile(suffix='.wav', delete=True) as tmp_wav:
+        sf.write(tmp_wav.name, audio, sr)
+        tmp_wav.flush()
+        with open(tmp_wav.name, 'rb') as f:
+            files = {'audio': (os.path.basename(audio_path), f, 'audio/wav')}
+            headers = {
+                'xi-api-key': ELEVEN_API_KEY,
+            }
+            response = requests.post(ELEVEN_API_URL, headers=headers, files=files)
+            if response.status_code == 200:
+                data = response.json()
+                transcription = data.get('text', '')
+            else:
+                logger.error(f"ElevenLabs API error: {response.status_code} {response.text}")
+                transcription = ''
+
     return {
         'segments': [{
             'start': 0,
