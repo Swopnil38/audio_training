@@ -372,6 +372,7 @@ class AudioChatListView(generics.ListCreateAPIView):
     """List and create audio chats"""
     
     serializer_class = None  # Will be set in methods
+    permission_classes = []  # Allow any for list, but check in create
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -389,6 +390,12 @@ class AudioChatListView(generics.ListCreateAPIView):
     
     def perform_create(self, serializer):
         from .models import AudioChat
+        from rest_framework.exceptions import PermissionDenied
+        
+        # Require authentication for creating chats
+        if not self.request.user.is_authenticated:
+            raise PermissionDenied("You must be logged in to create a chat.")
+        
         data = serializer.validated_data
         AudioChat.objects.create(
             user=self.request.user,
@@ -404,12 +411,20 @@ class AudioChatDetailView(generics.RetrieveUpdateDestroyAPIView):
     
     from .serializers import AudioChatSerializer
     serializer_class = AudioChatSerializer
+    permission_classes = []
     
     def get_queryset(self):
         from .models import AudioChat
         if self.request.user.is_authenticated:
             return AudioChat.objects.filter(user=self.request.user)
         return AudioChat.objects.none()
+    
+    def check_object_permissions(self, request, obj):
+        """Verify user owns this chat"""
+        from rest_framework.exceptions import PermissionDenied
+        if not request.user.is_authenticated or obj.user != request.user:
+            raise PermissionDenied("You don't have permission to access this chat.")
+
 
 
 class AudioChatMessagesView(generics.ListAPIView):
@@ -417,12 +432,20 @@ class AudioChatMessagesView(generics.ListAPIView):
     
     from .serializers import AudioChatMessageSerializer
     serializer_class = AudioChatMessageSerializer
+    permission_classes = []
     
     def get_queryset(self):
         from .models import AudioChatMessage, AudioChat
+        from rest_framework.exceptions import PermissionDenied
+        
         chat_id = self.kwargs.get('chat_id')
+        
+        if not self.request.user.is_authenticated:
+            raise PermissionDenied("You must be logged in to view chat messages.")
+        
         try:
             chat = AudioChat.objects.get(id=chat_id, user=self.request.user)
             return chat.messages.all()
         except AudioChat.DoesNotExist:
-            return AudioChatMessage.objects.none()
+            raise PermissionDenied("You don't have permission to access this chat.")
+

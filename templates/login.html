@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Log In - Audio Chat{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 60px auto; padding: 20px;">
+    <div style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+        <h2 style="margin: 0 0 30px 0; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">🎤 Audio Chat</h2>
+        
+        <form method="post" style="margin-bottom: 20px;">
+            {% csrf_token %}
+            
+            <div style="margin-bottom: 20px;">
+                <label for="id_username" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Username</label>
+                <input type="text" name="username" id="id_username" required style="width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="id_password" style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">Password</label>
+                <input type="password" name="password" id="id_password" required style="width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+            </div>
+            
+            <button type="submit" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px; margin-bottom: 20px;">Log In</button>
+        </form>
+        
+        <p style="text-align: center; color: #666; font-size: 14px;">
+            Don't have an account? <a href="/signup/" style="color: #667eea; text-decoration: none; font-weight: 600;">Sign up</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

@@ -406,11 +406,18 @@
                 })
             });
             
+            if (response.status === 403) {
+                alert('You must be logged in to create a chat');
+                window.location.href = '/login/';
+                return;
+            }
+            
             if (response.ok) {
                 const chat = await response.json();
                 window.location.href = `/chat/${chat.id}/`;
             } else {
-                alert('Error creating chat');
+                const error = await response.json();
+                alert('Error creating chat: ' + (error.detail || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error:', error);
@@ -422,6 +429,19 @@
     async function loadChats() {
         try {
             const response = await fetch('/api/chats/');
+            
+            if (response.status === 403) {
+                document.getElementById('chats-grid').style.display = 'none';
+                document.getElementById('empty-state').innerHTML = `
+                    <div class="empty-state-icon">🔒</div>
+                    <h2>Please Log In</h2>
+                    <p>You must be logged in to view your audio chats</p>
+                    <a href="/login/" style="display:inline-block; padding:10px 20px; background:#667eea; color:white; border-radius:6px; text-decoration:none; margin-top:20px;">Log In</a>
+                `;
+                document.getElementById('empty-state').style.display = 'block';
+                return;
+            }
+            
             const chats = await response.json();
             
             const grid = document.getElementById('chats-grid');
@@ -429,6 +449,11 @@
             
             if (chats.length === 0) {
                 grid.style.display = 'none';
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">💬</div>
+                    <h2>No chats yet</h2>
+                    <p>Create your first audio chat to get started with live translation</p>
+                `;
                 emptyState.style.display = 'block';
                 return;
             }
