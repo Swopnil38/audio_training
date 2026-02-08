@@ -7,9 +7,6 @@ import asyncio
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import User
-from .models import AudioChat, AudioChatMessage
-from .tasks import process_audio_message
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +148,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def user_has_access(self):
         """Check if user has access to this chat"""
+        from .models import AudioChat
         try:
             AudioChat.objects.get(id=self.chat_id, user=self.user)
             return True
@@ -162,7 +160,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         """Create audio chat message"""
         import base64
         from django.core.files.base import ContentFile
-        from django.utils import timezone
+        from .models import AudioChat, AudioChatMessage
         
         # Decode and save audio
         audio_data = base64.b64decode(audio_base64)
@@ -182,6 +180,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def update_chat_settings(self, settings):
         """Update chat settings"""
+        from .models import AudioChat
         chat = AudioChat.objects.get(id=self.chat_id)
         
         if 'target_language' in settings:
@@ -193,5 +192,6 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     
     async def process_message_async(self, message):
         """Process message asynchronously"""
+        from .tasks import process_audio_message
         # Use Celery task to process the audio
         process_audio_message.delay(str(message.id), str(self.chat_id), self.chat_group_name)
