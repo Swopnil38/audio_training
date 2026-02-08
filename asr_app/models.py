@@ -237,3 +237,141 @@ class TranscriptionJob(models.Model):
     
     def __str__(self):
         return f"Job {self.id} - {self.status}"
+
+
+# ===================
+# Audio Chat Models
+# ===================
+
+class AudioChat(models.Model):
+    """Audio chat conversation"""
+    
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        ARCHIVED = 'archived', 'Archived'
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='audio_chats'
+    )
+    
+    title = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE
+    )
+    
+    # Settings
+    source_language = models.CharField(
+        max_length=10,
+        choices=AudioFile.Language.choices,
+        default=AudioFile.Language.MIXED
+    )
+    target_language = models.CharField(
+        max_length=10,
+        default='en',
+        help_text='Target language for translation'
+    )
+    auto_play_translation = models.BooleanField(
+        default=True,
+        help_text='Auto-play audio translation'
+    )
+    
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.title or 'Chat'}"
+
+
+class AudioChatMessage(models.Model):
+    """Message in audio chat with transcription and translation"""
+    
+    class Role(models.TextChoices):
+        USER = 'user', 'User'
+        ASSISTANT = 'assistant', 'Assistant'
+    
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        TRANSCRIBING = 'transcribing', 'Transcribing'
+        TRANSLATING = 'translating', 'Translating'
+        COMPLETED = 'completed', 'Completed'
+        FAILED = 'failed', 'Failed'
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    chat = models.ForeignKey(
+        AudioChat,
+        on_delete=models.CASCADE,
+        related_name='messages'
+    )
+    
+    role = models.CharField(
+        max_length=20,
+        choices=Role.choices,
+        default=Role.USER
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    
+    # Audio
+    audio_file = models.FileField(
+        upload_to='audio_chat/%Y/%m/%d/',
+        help_text='Original audio recording'
+    )
+    audio_duration = models.FloatField(
+        null=True,
+        blank=True,
+        help_text='Duration in seconds'
+    )
+    
+    # Content
+    original_text = models.TextField(
+        blank=True,
+        help_text='Transcription in original language'
+    )
+    translated_text = models.TextField(
+        blank=True,
+        help_text='Translated text'
+    )
+    
+    # Audio synthesis
+    translated_audio = models.FileField(
+        upload_to='audio_chat_translations/%Y/%m/%d/',
+        blank=True,
+        null=True,
+        help_text='Generated audio from translation'
+    )
+    
+    # Processing
+    error_message = models.TextField(blank=True)
+    processing_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Metadata from transcription/translation APIs'
+    )
+    
+    # Tracking
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['chat', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.chat.id} - {self.role}"

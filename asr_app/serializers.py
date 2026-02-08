@@ -175,3 +175,59 @@ class ExportDataSerializer(serializers.Serializer):
         choices=[('all', 'All'), ('ne', 'Nepali'), ('en', 'English'), ('mixed', 'Mixed')],
         default='all'
     )
+
+
+# ===================
+# Audio Chat Serializers
+# ===================
+
+class AudioChatMessageSerializer(serializers.ModelSerializer):
+    """Serializer for audio chat messages"""
+    
+    class Meta:
+        from .models import AudioChatMessage
+        model = AudioChatMessage
+        fields = [
+            'id', 'role', 'status',
+            'original_text', 'translated_text',
+            'audio_file', 'translated_audio',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'status', 'original_text', 'translated_text',
+            'translated_audio', 'created_at', 'updated_at'
+        ]
+
+
+class AudioChatSerializer(serializers.ModelSerializer):
+    """Serializer for audio chat"""
+    
+    messages = AudioChatMessageSerializer(many=True, read_only=True)
+    message_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        from .models import AudioChat
+        model = AudioChat
+        fields = [
+            'id', 'title', 'status',
+            'source_language', 'target_language',
+            'auto_play_translation',
+            'messages', 'message_count',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_message_count(self, obj):
+        return obj.messages.count()
+
+
+class AudioChatCreateSerializer(serializers.Serializer):
+    """Serializer for creating audio chat"""
+    
+    title = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    source_language = serializers.ChoiceField(
+        choices=['ne', 'en', 'mixed'],
+        default='mixed'
+    )
+    target_language = serializers.CharField(max_length=10, default='en')
+    auto_play_translation = serializers.BooleanField(default=True)

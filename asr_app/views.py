@@ -48,6 +48,9 @@ from .serializers import (
     TranscriptionJobSerializer,
     CorrectionSerializer,
     BulkCorrectionSerializer,
+    AudioChatSerializer,
+    AudioChatCreateSerializer,
+    AudioChatMessageSerializer,
 )
 from .tasks import transcribe_audio_task
 
@@ -344,3 +347,82 @@ def export_training_data(request):
         'format': format_type,
         'data': export_data
     })
+
+
+# ===================
+# Audio Chat Views
+# ===================
+
+class AudioChatView(TemplateView):
+    """Audio chat page view"""
+    template_name = 'asr_app/audio_chat.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['chat_id'] = kwargs.get('chat_id')
+        return context
+
+
+class AudioChatsListView(TemplateView):
+    """List audio chats page view"""
+    template_name = 'asr_app/chats.html'
+
+
+class AudioChatListView(generics.ListCreateAPIView):
+    """List and create audio chats"""
+    
+    serializer_class = None  # Will be set in methods
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            from .serializers import AudioChatCreateSerializer
+            return AudioChatCreateSerializer
+        else:
+            from .serializers import AudioChatSerializer
+            return AudioChatSerializer
+    
+    def get_queryset(self):
+        from .models import AudioChat
+        if self.request.user.is_authenticated:
+            return AudioChat.objects.filter(user=self.request.user)
+        return AudioChat.objects.none()
+    
+    def perform_create(self, serializer):
+        from .models import AudioChat
+        data = serializer.validated_data
+        AudioChat.objects.create(
+            user=self.request.user,
+            title=data.get('title', ''),
+            source_language=data.get('source_language', 'mixed'),
+            target_language=data.get('target_language', 'en'),
+            auto_play_translation=data.get('auto_play_translation', True)
+        )
+
+
+class AudioChatDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve, update, and delete audio chat"""
+    
+    from .serializers import AudioChatSerializer
+    serializer_class = AudioChatSerializer
+    
+    def get_queryset(self):
+        from .models import AudioChat
+        if self.request.user.is_authenticated:
+            return AudioChat.objects.filter(user=self.request.user)
+        return AudioChat.objects.none()
+
+
+class AudioChatMessagesView(generics.ListAPIView):
+    """Get messages for audio chat"""
+    
+    from .serializers import AudioChatMessageSerializer
+    serializer_class = AudioChatMessageSerializer
+    
+    def get_queryset(self):
+        from .models import AudioChatMessage, AudioChat
+        chat_id = self.kwargs.get('chat_id')
+        try:
+            chat = AudioChat.objects.get(id=chat_id, user=self.request.user)
+            return chat.messages.all()
+        except AudioChat.DoesNotExist:
+            return AudioChatMessage.objects.none()

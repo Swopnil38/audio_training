@@ -19,6 +19,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    'daphne',  # Channels ASGI app
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_celery_results',
+    'channels',
     # Local
     'asr_app',
     'training',
@@ -159,3 +161,13 @@ AZURE_OPENAI_EMBED_DEPLOYMENT_NAME = os.getenv("AZURE_OPENAI_EMBED_DEPLOYMENT_NA
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
+# Channels
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379/6')],
+        },
+    },
+}
