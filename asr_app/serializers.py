@@ -221,13 +221,20 @@ class AudioChatSerializer(serializers.ModelSerializer):
         return obj.messages.count()
 
 
-class AudioChatCreateSerializer(serializers.Serializer):
+class AudioChatCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating audio chat"""
     
-    title = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    source_language = serializers.ChoiceField(
-        choices=['ne', 'en', 'mixed'],
-        default='mixed'
-    )
-    target_language = serializers.CharField(max_length=10, default='en')
-    auto_play_translation = serializers.BooleanField(default=True)
+    class Meta:
+        from .models import AudioChat
+        model = AudioChat
+        fields = ['id', 'title', 'source_language', 'target_language', 'auto_play_translation', 'created_at']
+        read_only_fields = ['id', 'created_at']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set defaults
+        self.fields['source_language'].default = 'mixed'
+        self.fields['target_language'].default = 'en'
+        self.fields['auto_play_translation'].default = True
+        self.fields['title'].required = False
+        self.fields['title'].allow_blank = True

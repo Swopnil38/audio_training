@@ -389,21 +389,14 @@ class AudioChatListView(generics.ListCreateAPIView):
         return AudioChat.objects.none()
     
     def perform_create(self, serializer):
-        from .models import AudioChat
         from rest_framework.exceptions import PermissionDenied
         
         # Require authentication for creating chats
         if not self.request.user.is_authenticated:
             raise PermissionDenied("You must be logged in to create a chat.")
         
-        data = serializer.validated_data
-        AudioChat.objects.create(
-            user=self.request.user,
-            title=data.get('title', ''),
-            source_language=data.get('source_language', 'mixed'),
-            target_language=data.get('target_language', 'en'),
-            auto_play_translation=data.get('auto_play_translation', True)
-        )
+        # Let serializer handle the save with the user
+        serializer.save(user=self.request.user)
 
 
 class AudioChatDetailView(generics.RetrieveUpdateDestroyAPIView):
