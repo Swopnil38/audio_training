@@ -184,19 +184,35 @@ class ExportDataSerializer(serializers.Serializer):
 class AudioChatMessageSerializer(serializers.ModelSerializer):
     """Serializer for audio chat messages"""
     
+    audio_file_url = serializers.SerializerMethodField()
+    translated_audio_url = serializers.SerializerMethodField()
+    
     class Meta:
         from .models import AudioChatMessage
         model = AudioChatMessage
         fields = [
             'id', 'role', 'status',
             'original_text', 'translated_text',
-            'audio_file', 'translated_audio',
+            'audio_file', 'audio_file_url', 'audio_duration',
+            'translated_audio', 'translated_audio_url',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'status', 'original_text', 'translated_text',
             'translated_audio', 'created_at', 'updated_at'
         ]
+    
+    def get_audio_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.audio_file and request:
+            return request.build_absolute_uri(obj.audio_file.url)
+        return None
+    
+    def get_translated_audio_url(self, obj):
+        request = self.context.get('request')
+        if obj.translated_audio and request:
+            return request.build_absolute_uri(obj.translated_audio.url)
+        return None
 
 
 class AudioChatSerializer(serializers.ModelSerializer):

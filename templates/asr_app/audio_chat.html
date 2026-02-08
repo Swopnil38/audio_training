@@ -424,16 +424,36 @@
     function displayMessage(msg) {
         const messageEl = document.createElement('div');
         messageEl.className = `message ${msg.role}`;
-        messageEl.id = `msg-${msg.message_id}`;
+        messageEl.id = `msg-${msg.id || msg.message_id}`;
         
         const contentEl = document.createElement('div');
         contentEl.className = 'message-content';
         
+        // Original audio player
+        if (msg.audio_file_url) {
+            const audioDiv = document.createElement('div');
+            audioDiv.className = 'message-audio-original';
+            audioDiv.style.cssText = 'margin-bottom: 10px; font-size: 12px; color: #666;';
+            const audioEl = document.createElement('audio');
+            audioEl.controls = true;
+            audioEl.src = msg.audio_file_url;
+            audioEl.style.cssText = 'width: 100%; max-width: 250px;';
+            const label = document.createElement('div');
+            label.textContent = '🎙️ Original Audio';
+            label.style.cssText = 'margin-bottom: 5px; font-weight: 600;';
+            audioDiv.appendChild(label);
+            audioDiv.appendChild(audioEl);
+            contentEl.appendChild(audioDiv);
+        }
+        
+        // Transcription text
         const textEl = document.createElement('div');
         textEl.className = 'message-text';
+        textEl.style.cssText = 'margin-bottom: 8px;';
         textEl.textContent = msg.original_text || '(Processing...)';
         contentEl.appendChild(textEl);
         
+        // Status badge
         const statusEl = document.createElement('div');
         statusEl.className = 'message-status';
         statusEl.innerHTML = `<span class="status-badge status-${msg.status}">${msg.status}</span>`;
@@ -455,25 +475,39 @@
         // Update status
         statusEl.innerHTML = `<span class="status-badge status-${data.status}">${data.status}</span>`;
         
-        // Update text if available
+        // Update original text if available
         if (data.original_text) {
             const textEl = contentEl.querySelector('.message-text');
-            textEl.textContent = data.original_text;
+            if (textEl) {
+                textEl.textContent = data.original_text;
+            }
         }
         
         // Add translated audio if available
-        if (data.status === 'completed' && data.translated_audio) {
-            const audioEl = document.createElement('audio');
-            audioEl.controls = true;
-            audioEl.src = data.translated_audio;
-            const audioDiv = document.createElement('div');
-            audioDiv.className = 'message-audio';
-            audioDiv.appendChild(audioEl);
-            contentEl.appendChild(audioDiv);
-            
-            // Auto-play if enabled
-            if (autoPlayCheckbox.checked) {
-                audioEl.play().catch(e => console.log('Auto-play prevented:', e));
+        if ((data.status === 'completed' || data.status === 'audio_ready') && data.translated_audio_url) {
+            // Check if already has translation audio
+            if (!contentEl.querySelector('.message-audio-translated')) {
+                const audioDiv = document.createElement('div');
+                audioDiv.className = 'message-audio-translated';
+                audioDiv.style.cssText = 'margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 12px; color: #666;';
+                
+                const audioEl = document.createElement('audio');
+                audioEl.controls = true;
+                audioEl.src = data.translated_audio_url;
+                audioEl.style.cssText = 'width: 100%; max-width: 250px;';
+                
+                const label = document.createElement('div');
+                label.textContent = '🔊 Translation Audio';
+                label.style.cssText = 'margin-bottom: 5px; font-weight: 600;';
+                
+                audioDiv.appendChild(label);
+                audioDiv.appendChild(audioEl);
+                contentEl.appendChild(audioDiv);
+                
+                // Auto-play if enabled
+                if (autoPlayCheckbox.checked) {
+                    audioEl.play().catch(e => console.log('Auto-play prevented:', e));
+                }
             }
         }
     }

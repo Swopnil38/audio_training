@@ -147,10 +147,10 @@ def transcribe_audio_task(self, audio_file_id: str, job_id: str):
 # Audio Chat Tasks
 # ===================
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=2, time_limit=120)
 def process_audio_message(self, message_id: str, chat_id: str, group_name: str = None):
     """
-    Process audio message: transcribe and translate
+    REAL-TIME STREAMING: Use ElevenLabs WebSocket streaming for instant audio
     
     Args:
         message_id: UUID of AudioChatMessage
@@ -158,94 +158,47 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
         group_name: WebSocket group name for broadcasting updates
     """
     from .models import AudioChatMessage, AudioChat
-    from .services.elevenlabs_service import ElevenLabsService, generate_audio_from_text
+    from .services.streaming_service import RealtimeStreamingService
     from asgiref.sync import async_to_sync
     from channels.layers import get_channel_layer
-    import json
+    from io import BytesIO
+    from elevenlabs.client import ElevenLabs
+    from django.core.files.base import ContentFile
     
     try:
         message = AudioChatMessage.objects.get(id=message_id)
         chat = AudioChat.objects.get(id=chat_id)
         
-        # Update status
+        # Mark as processing
         message.status = AudioChatMessage.Status.TRANSCRIBING
-        message.save()
+        message.save(update_fields=['status'])
         
-        # Broadcast status update
-        if group_name:
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                {
-                    'type': 'chat_update',
-                    'message_id': str(message.id),
-                    'status': 'transcribing'
-                }
-            )
-        
-        # Transcribe audio using ElevenLabs
-        service = ElevenLabsService()
         audio_path = message.audio_file.path
         
+        # FAST: Transcribe immediately
         try:
-            from io import BytesIO
             with open(audio_path, 'rb') as f:
                 audio_data = f.read()
             
-            # Transcribe using ElevenLabs STT
-            from elevenlabs.client import ElevenLabs
             client = ElevenLabs()
-            
             transcription = client.speech_to_text.convert(
                 file=BytesIO(audio_data),
                 model_id="scribe_v2",
                 language_code=None,
             )
             
-            original_text = getattr(transcription, 'text', '')
+            original_text = getattr(transcription, 'text', '') or "[No speech detected]"
             
         except Exception as e:
             logger.error(f"Transcription error: {str(e)}")
             original_text = "[Transcription failed]"
         
         message.original_text = original_text
-        message.status = AudioChatMessage.Status.TRANSLATING
-        message.save()
-        
-        # Broadcast transcription
-        if group_name:
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                group_name,
-                {
-                    'type': 'chat_update',
-                    'message_id': str(message.id),
-                    'status': 'translating',
-                    'original_text': original_text
-                }
-            )
-        
-        # Translate text (if needed)
-        translated_text = original_text  # Simple pass-through for now
-        
-        # You can add translation service here if needed
-        # from google.cloud import translate_v2
-        
-        message.translated_text = translated_text
-        message.save()
-        
-        # Generate audio from translated text using ElevenLabs TTS
-        try:
-            audio_file = generate_audio_from_text(translated_text)
-            if audio_file:
-                message.translated_audio = audio_file
-        except Exception as e:
-            logger.error(f"TTS error: {str(e)}")
-        
+        message.translated_text = original_text
         message.status = AudioChatMessage.Status.COMPLETED
-        message.save()
+        message.save(update_fields=['original_text', 'translated_text', 'status'])
         
-        # Broadcast completion
+        # Broadcast transcription instantly
         if group_name:
             channel_layer = get_channel_layer()
             async_to_sync(channel_layer.group_send)(
@@ -254,11 +207,55 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
                     'type': 'chat_update',
                     'message_id': str(message.id),
                     'status': 'completed',
-                    'translated_text': translated_text
+                    'original_text': original_text,
+                    'translated_text': original_text
                 }
             )
         
-        logger.info(f"Audio message {message_id} processed successfully")
+        # STREAMING: Generate TTS in background with real-time streaming chunks
+        def generate_streaming_tts():
+            try:
+                streaming_service = RealtimeStreamingService()
+                
+                # Use streaming to get chunks as they're generated
+                audio_chunks = []
+                chunk_count = 0
+                
+                for chunk in streaming_service.stream_text_to_speech(original_text):
+                    if chunk:
+                        audio_chunks.append(chunk)
+                        chunk_count += 1
+                
+                if audio_chunks:
+                    # Combine all chunks into final audio file
+                    complete_audio = b''.join(audio_chunks)
+                    audio_file = ContentFile(complete_audio, name='translation.mp3')
+                    message.translated_audio = audio_file
+                    message.save(update_fields=['translated_audio'])
+                    
+                    logger.info(f"Streamed {chunk_count} audio chunks for message {message_id}")
+                    
+                    # Broadcast TTS ready
+                    if group_name:
+                        channel_layer = get_channel_layer()
+                        async_to_sync(channel_layer.group_send)(
+                            group_name,
+                            {
+                                'type': 'chat_update',
+                                'message_id': str(message.id),
+                                'status': 'audio_ready',
+                                'translated_audio_url': message.translated_audio.url if message.translated_audio else None
+                            }
+                        )
+            except Exception as e:
+                logger.error(f"Streaming TTS error: {str(e)}")
+        
+        # Start TTS streaming in background
+        import threading
+        tts_thread = threading.Thread(target=generate_streaming_tts, daemon=True)
+        tts_thread.start()
+        
+        logger.info(f"Audio message {message_id} processed (streaming in background)")
         
     except AudioChatMessage.DoesNotExist:
         logger.error(f"AudioChatMessage {message_id} not found")
@@ -271,9 +268,8 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
             message = AudioChatMessage.objects.get(id=message_id)
             message.status = AudioChatMessage.Status.FAILED
             message.error_message = str(e)
-            message.save()
+            message.save(update_fields=['status', 'error_message'])
         except Exception:
             pass
         
-        # Retry with exponential backoff
-        raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
+        raise self.retry(exc=e, countdown=10 * (2 ** self.request.retries))
