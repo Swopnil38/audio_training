@@ -434,9 +434,11 @@
     let silenceStartTime = null;
     let lastSpeechTime = null;
     let consecutiveSilenceChecks = 0;
+    let continuousSendInterval = null;
     
     // Voice Activity Detection thresholds
     const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
+    const CONTINUOUS_SEND_INTERVAL = 2000; // Send every 2 seconds while speaking
     const SILENCE_CHECKS_NEEDED = 35; // ~35 checks * 150ms = 5.25 seconds
     const CHECK_INTERVAL = 150;     // Check audio level every 150ms
     
@@ -609,31 +611,46 @@
         // Voice Activity Detection logic
         const isSpeech = rms > SPEECH_THRESHOLD;
         
-        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, SilenceCount: ${consecutiveSilenceChecks}, Chunks: ${recordingChunks.length}`);
+        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, Chunks: ${recordingChunks.length}`);
         
         if (isSpeech) {
-            // User is speaking - reset silence counter
+            // User is speaking
             lastSpeechTime = Date.now();
             consecutiveSilenceChecks = 0;
+            
+            // Start continuous sending timer when speech begins
+            if (!continuousSendInterval) {
+                console.log('Speech detected - starting continuous send every 2s');
+                continuousSendInterval = setInterval(() => {
+                    if (isSessionActive && recordingChunks.length > 0) {
+                        console.log('⏱️ Continuous send triggered');
+                        autoSendAudio(true); // true = continue listening after send
+                    }
+                }, CONTINUOUS_SEND_INTERVAL);
+            }
             
             if (silenceDetectionTimeout) {
                 clearTimeout(silenceDetectionTimeout);
                 silenceDetectionTimeout = null;
                 stopSilenceTimer();
-                console.log('Speech detected - silence timer reset');
             }
         } else {
             // Possible silence - increment counter
             consecutiveSilenceChecks++;
             
-            // After SILENCE_CHECKS_NEEDED consecutive silence checks (~5 seconds)
+            // After silence period, send remaining audio and stop continuous send
             if (consecutiveSilenceChecks >= SILENCE_CHECKS_NEEDED) {
-                if (!silenceDetectionTimeout && recordingChunks.length > 0) {
-                    // Only auto-send if we have audio recorded
-                    console.log('Silence threshold reached - auto-sending!');
-                    autoSendAudio();
-                    consecutiveSilenceChecks = 0;
+                if (recordingChunks.length > 0) {
+                    console.log('Silence reached - sending final chunks');
+                    autoSendAudio(false); // false = end of this message
                 }
+                
+                if (continuousSendInterval) {
+                    clearInterval(continuousSendInterval);
+                    continuousSendInterval = null;
+                    console.log('Stopped continuous send');
+                }
+                consecutiveSilenceChecks = 0;
             } else if (consecutiveSilenceChecks === 1) {
                 // Just started silence
                 startSilenceTimer();
@@ -675,9 +692,19 @@
             recordingChunks = [];
             sessionStartTime = Date.now();
             isSessionActive = true;
+            consecutiveSilenceChecks = 0;
+            lastSpeechTime = Date.now();
             
-            mediaRecorder.ondataavailable = (e) => recordingChunks.push(e.data);
-            mediaRecorder.start();
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    recordingChunks.push(e.data);
+                    console.log('Audio chunk received, total chunks:', recordingChunks.length);
+                }
+            };
+            
+            // Start with 500ms timeslice to get periodic data
+            mediaRecorder.start(500);
+            console.log('MediaRecorder started with 500ms timeslice');
             
             // Setup UI
             startBtn.style.display = 'none';
@@ -703,25 +730,32 @@
     });
     
     // Auto-send when silence is detected
-    function autoSendAudio() {
+    function autoSendAudio(isContinuous = false) {
         if (!isSessionActive || recordingChunks.length === 0) {
+            console.log('No audio chunks to send, skipping auto-send');
             silenceDetectionTimeout = null;
             stopSilenceTimer();
             return;
         }
         
+        console.log(`${isContinuous ? '⏱️ Continuous' : '⏸️ Final'} send - ${recordingChunks.length} chunks`);
         const blob = new Blob(recordingChunks, { type: 'audio/wav' });
-        recordingChunks = []; // Clear for next message
+        recordingChunks = []; // Clear for next batch
+        consecutiveSilenceChecks = 0; // Reset for next pause detection
         
-        // Create a temporary message with pending status
-        const tempId = 'msg-' + Date.now();
-        const tempMsg = {
-            id: tempId,
-            role: 'user',
-            original_text: '(Sending audio...)',
-            status: 'pending'
-        };
-        displayMessage(tempMsg);
+        // Create a temporary message with pending status (only for first send)
+        let tempId = null;
+        if (!isContinuous) {
+            // Final send - create new message
+            tempId = 'msg-' + Date.now();
+            const tempMsg = {
+                id: tempId,
+                role: 'user',
+                original_text: '(Sending audio...)',
+                status: 'pending'
+            };
+            displayMessage(tempMsg);
+        }
         
         const reader = new FileReader();
         reader.onload = () => {
@@ -731,17 +765,20 @@
                     type: 'audio_message',
                     audio: base64,
                     language: sourceLangSelect.value,
-                    temp_id: tempId
+                    temp_id: tempId,
+                    is_continuous: isContinuous // Server can group continuous chunks
                 };
                 socket.send(JSON.stringify(message));
-                console.log('Audio message sent to server');
+                console.log(`✅ Audio sent - temp_id: ${tempId}`);
                 
-                // Update temp message to show processing
-                const msgEl = document.getElementById(tempId);
-                if (msgEl) {
-                    const statusEl = msgEl.querySelector('.message-status');
-                    if (statusEl) {
-                        statusEl.innerHTML = `<span class="status-badge status-transcribing">Transcribing...</span>`;
+                // Update message status if this is the first send
+                if (tempId) {
+                    const msgEl = document.getElementById(tempId);
+                    if (msgEl) {
+                        const statusEl = msgEl.querySelector('.message-status');
+                        if (statusEl) {
+                            statusEl.innerHTML = `<span class="status-badge status-transcribing">Transcribing...</span>`;
+                        }
                     }
                 }
             } catch (e) {
@@ -751,8 +788,12 @@
         };
         reader.readAsDataURL(blob);
         
-        // Reset silence detection
-        silenceDetectionTimeout = null;
+        // For final send only
+        if (!isContinuous) {
+            silenceDetectionTimeout = null;
+            stopSilenceTimer();
+        }
+    }
         stopSilenceTimer();
     }
     
@@ -762,9 +803,15 @@
         
         isSessionActive = false;
         
+        // Stop continuous sending
+        if (continuousSendInterval) {
+            clearInterval(continuousSendInterval);
+            continuousSendInterval = null;
+        }
+        
         // Send any remaining audio
         if (recordingChunks.length > 0) {
-            autoSendAudio();
+            autoSendAudio(false); // Final send
         }
         
         if (mediaRecorder && mediaRecorder.state === 'recording') {
