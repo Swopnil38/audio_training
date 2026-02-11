@@ -1,5 +1,6 @@
 """
 WebSocket consumers for audio chat
+Optimized for ChatGPT-style pause detection (5-second auto-send)
 """
 
 import json
@@ -12,16 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class AudioChatConsumer(AsyncWebsocketConsumer):
-    """WebSocket consumer for real-time audio chat"""
+    """WebSocket consumer for real-time audio chat with pause detection"""
     
     async def connect(self):
         """Handle WebSocket connection"""
         self.chat_id = self.scope['url_route']['kwargs']['chat_id']
         self.user = self.scope['user']
         self.chat_group_name = f'audio_chat_{self.chat_id}'
-        
-        # Track continuous audio chunks by temp_id
-        self.audio_buffer = {}  # {temp_id: [chunk1, chunk2, ...]}
         
         # Join the chat group
         await self.channel_layer.group_add(
@@ -66,53 +64,25 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             await self.send_error(f"Error: {str(e)}")
     
     async def handle_audio_message(self, data):
-        """Handle incoming audio message"""
+        """
+        Handle incoming audio message.
+        Frontend sends complete audio after 5-second pause detection.
+        """
         try:
             # Extract audio data
             audio_base64 = data.get('audio')
             language = data.get('language', 'mixed')
             temp_id = data.get('temp_id')
-            is_continuous = data.get('is_continuous', False)
             
             if not audio_base64:
                 await self.send_error("No audio data provided")
                 return
             
-            # Accumulate chunks if continuous send
-            if is_continuous and temp_id:
-                if temp_id not in self.audio_buffer:
-                    self.audio_buffer[temp_id] = []
-                    logger.info(f"Starting new continuous message group: {temp_id}")
-                
-                self.audio_buffer[temp_id].append(audio_base64)
-                logger.info(f"Buffered chunk for {temp_id}, total chunks: {len(self.audio_buffer[temp_id])}")
-                
-                # Send progress update to client
-                await self.channel_layer.group_send(
-                    self.chat_group_name,
-                    {
-                        'type': 'chat_update',
-                        'message_id': temp_id,
-                        'status': 'transcribing',
-                        'original_text': f'(Listening... {len(self.audio_buffer[temp_id])} chunks)',
-                    }
-                )
-                return
+            logger.info(f"Received audio message - temp_id: {temp_id}, language: {language}")
             
-            # Final send - combine all buffered chunks + this final chunk
-            if temp_id and temp_id in self.audio_buffer:
-                # Combine all chunks
-                self.audio_buffer[temp_id].append(audio_base64)
-                combined_audio = self.combine_audio_chunks(self.audio_buffer[temp_id])
-                logger.info(f"Final send for {temp_id}, combined {len(self.audio_buffer[temp_id])} chunks")
-                del self.audio_buffer[temp_id]
-            else:
-                # No buffering, use as-is (single send without continuous mode)
-                combined_audio = audio_base64
-            
-            # Create message record with combined audio
+            # Create message record
             message = await self.create_message(
-                audio_base64=combined_audio,
+                audio_base64=audio_base64,
                 language=language,
                 temp_id=temp_id
             )
@@ -130,11 +100,11 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
                 }
             )
             
-            # Process audio asynchronously
+            # Process audio asynchronously (transcription + translation)
             await self.process_message_async(message)
             
         except Exception as e:
-            logger.error(f"Error handling audio message: {str(e)}")
+            logger.error(f"Error handling audio message: {str(e)}", exc_info=True)
             await self.send_error(f"Failed to process audio: {str(e)}")
     
     async def handle_settings_update(self, data):
@@ -184,71 +154,6 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     
     # Database operations
     
-    def combine_audio_chunks(self, audio_chunks):
-        """Combine multiple base64 audio chunks into one proper WAV file"""
-        import base64
-        import io
-        import wave
-        
-        if not audio_chunks:
-            return ""
-        
-        if len(audio_chunks) == 1:
-            return audio_chunks[0]
-        
-        try:
-            # Decode all chunks
-            decoded = [base64.b64decode(chunk) for chunk in audio_chunks]
-            
-            # Read all WAV files and combine audio data
-            combined_frames = []
-            sample_rate = None
-            channels = None
-            sample_width = None
-            
-            for chunk_data in decoded:
-                try:
-                    with wave.open(io.BytesIO(chunk_data), 'rb') as wav_file:
-                        # Get WAV parameters from first chunk
-                        if sample_rate is None:
-                            channels = wav_file.getnchannels()
-                            sample_width = wav_file.getsampwidth()
-                            sample_rate = wav_file.getframerate()
-                        
-                        # Read and accumulate frames
-                        frames = wav_file.readframes(wav_file.getnframes())
-                        combined_frames.append(frames)
-                except Exception as e:
-                    logger.warning(f"Error reading WAV chunk: {e}, skipping")
-                    continue
-            
-            if not combined_frames:
-                logger.warning("No valid WAV chunks to combine")
-                return audio_chunks[0]
-            
-            # Create new WAV file with combined audio
-            output = io.BytesIO()
-            with wave.open(output, 'wb') as wav_file:
-                wav_file.setnchannels(channels)
-                wav_file.setsampwidth(sample_width)
-                wav_file.setframerate(sample_rate)
-                wav_file.writeframes(b''.join(combined_frames))
-            
-            # Return combined audio as base64
-            combined_data = output.getvalue()
-            return base64.b64encode(combined_data).decode('utf-8')
-            
-        except Exception as e:
-            logger.error(f"Error combining audio chunks: {e}, falling back to simple concat")
-            # Fallback: simple concatenation
-            combined = decoded[0]
-            for chunk in decoded[1:]:
-                if len(chunk) > 44:
-                    combined += chunk[44:]
-                else:
-                    combined += chunk
-            return base64.b64encode(combined).decode('utf-8')
-    
     @database_sync_to_async
     def user_has_access(self):
         """Check if user has access to this chat"""
@@ -280,6 +185,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             temp_id=temp_id  # Store temp_id to link with frontend
         )
         
+        logger.info(f"Created message {message.id} with temp_id: {temp_id}")
         return message
     
     @database_sync_to_async
@@ -288,15 +194,23 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         from .models import AudioChat
         chat = AudioChat.objects.get(id=self.chat_id)
         
+        if 'source_language' in settings:
+            chat.source_language = settings['source_language']
         if 'target_language' in settings:
             chat.target_language = settings['target_language']
         if 'auto_play_translation' in settings:
             chat.auto_play_translation = settings['auto_play_translation']
         
         chat.save()
+        logger.info(f"Updated chat settings: {settings}")
     
     async def process_message_async(self, message):
-        """Process message asynchronously"""
+        """Process message asynchronously using Celery"""
         from .tasks import process_audio_message
-        # Use Celery task to process the audio
-        process_audio_message.delay(str(message.id), str(self.chat_id), self.chat_group_name)
+        # Use Celery task to process the audio (transcription + translation)
+        process_audio_message.delay(
+            str(message.id), 
+            str(self.chat_id), 
+            self.chat_group_name
+        )
+        logger.info(f"Queued processing task for message {message.id}")
