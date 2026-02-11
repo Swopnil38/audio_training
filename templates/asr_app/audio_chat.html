@@ -260,7 +260,7 @@
     
     .empty-state-icon {
         font-size: 4rem;
-        margin-bottom: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
     }
     
     .empty-state-text {
@@ -268,111 +268,109 @@
         font-weight: 500;
     }
     
-    .empty-state-subtext {
-        font-size: 0.875rem;
-        margin-top: var(--spacing-xs);
-    }
-    
-    /* Messages */
+    /* Message Bubble */
     .message {
-        display: flex;
         margin-bottom: var(--spacing-lg);
-        animation: messageSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        opacity: 0;
+        animation-fill-mode: forwards;
     }
     
     @keyframes messageSlideIn {
         from {
             opacity: 0;
-            transform: translateY(20px) scale(0.95);
+            transform: translateY(10px);
         }
         to {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
         }
     }
     
-    .message.user {
-        justify-content: flex-end;
-    }
-    
     .message-bubble {
-        max-width: 70%;
+        max-width: 75%;
         padding: var(--spacing-md) var(--spacing-lg);
         border-radius: var(--radius-lg);
         position: relative;
-        transition: all var(--transition-base);
-    }
-    
-    .message-bubble:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
     }
     
     .message.user .message-bubble {
         background: var(--bg-user-msg);
         color: white;
-        border-bottom-right-radius: var(--spacing-xs);
+        margin-left: auto;
+        border-bottom-right-radius: var(--radius-sm);
     }
     
     .message.assistant .message-bubble {
         background: var(--bg-assistant-msg);
         color: var(--text-primary);
-        border-bottom-left-radius: var(--spacing-xs);
-        border: 1px solid var(--border);
+        border-bottom-left-radius: var(--radius-sm);
+    }
+    
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-xs);
+        gap: var(--spacing-md);
+    }
+    
+    .message-role {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.9;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        font-weight: 500;
     }
     
     .message-text {
         font-size: 1rem;
         line-height: 1.6;
-        margin-bottom: var(--spacing-sm);
         word-wrap: break-word;
+        margin-bottom: var(--spacing-sm);
     }
     
-    .message.user .message-text {
-        color: white;
-    }
-    
-    /* Audio Players */
-    .message-audio {
-        margin-top: var(--spacing-md);
-        padding-top: var(--spacing-md);
+    .message-translation {
+        font-size: 0.9rem;
+        opacity: 0.85;
+        padding-top: var(--spacing-sm);
         border-top: 1px solid rgba(255, 255, 255, 0.2);
+        margin-top: var(--spacing-sm);
     }
     
-    .message.assistant .message-audio {
+    .message.assistant .message-translation {
         border-top-color: var(--border);
     }
     
-    .audio-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: var(--spacing-xs);
-        opacity: 0.8;
+    .message-audio {
+        margin-top: var(--spacing-sm);
     }
     
     .message-audio audio {
         width: 100%;
-        height: 36px;
+        height: 32px;
         border-radius: var(--radius-sm);
-        margin-top: var(--spacing-xs);
     }
     
-    /* Status Badge */
     .message-status {
         margin-top: var(--spacing-sm);
         display: flex;
-        align-items: center;
-        gap: var(--spacing-xs);
+        gap: var(--spacing-sm);
+        flex-wrap: wrap;
     }
     
     .status-badge {
         display: inline-flex;
         align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: var(--radius-full);
+        gap: var(--spacing-xs);
+        padding: 0.25rem var(--spacing-sm);
+        border-radius: var(--radius-sm);
         font-size: 0.75rem;
         font-weight: 600;
         text-transform: uppercase;
@@ -380,23 +378,30 @@
     }
     
     .status-badge.transcribing {
-        background: rgba(59, 130, 246, 0.1);
-        color: #2563eb;
+        background: rgba(255, 215, 0, 0.2);
+        color: #b8860b;
+    }
+    
+    .message.assistant .status-badge.transcribing {
+        background: rgba(255, 215, 0, 0.15);
     }
     
     .status-badge.translating {
-        background: rgba(139, 92, 246, 0.1);
-        color: #7c3aed;
+        background: rgba(99, 102, 241, 0.2);
+        color: #4f46e5;
+    }
+    
+    .message.assistant .status-badge.translating {
+        background: rgba(99, 102, 241, 0.15);
     }
     
     .status-badge.completed {
-        background: rgba(16, 185, 129, 0.1);
-        color: #059669;
+        background: rgba(34, 197, 94, 0.2);
+        color: #16a34a;
     }
     
-    .status-badge.failed {
-        background: rgba(239, 68, 68, 0.1);
-        color: #dc2626;
+    .message.assistant .status-badge.completed {
+        background: rgba(34, 197, 94, 0.15);
     }
     
     .status-dot {
@@ -404,261 +409,202 @@
         height: 6px;
         border-radius: 50%;
         background: currentColor;
-        animation: statusPulse 2s ease-in-out infinite;
+        animation: blink 1.5s ease-in-out infinite;
     }
     
-    @keyframes statusPulse {
+    @keyframes blink {
         0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+        50% { opacity: 0.3; }
     }
     
-    /* Control Panel */
-    .control-panel {
+    /* Control Bar */
+    .control-bar {
         padding: var(--spacing-xl);
-        background: white;
+        background: linear-gradient(to top, #ffffff 0%, #f8fafc 100%);
         border-top: 1px solid var(--border);
     }
     
-    .controls-wrapper {
+    .controls {
         display: flex;
-        align-items: center;
         gap: var(--spacing-md);
+        align-items: center;
+        justify-content: center;
         flex-wrap: wrap;
     }
     
-    /* Record Button */
-    .record-button {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: none;
-        background: var(--bg-user-msg);
-        color: white;
-        font-size: 2rem;
-        cursor: pointer;
-        display: flex;
+    .btn {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md) var(--spacing-xl);
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        border-radius: var(--radius-md);
+        cursor: pointer;
         transition: all var(--transition-base);
+        font-family: inherit;
+        white-space: nowrap;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        color: white;
         box-shadow: var(--shadow-md);
-        position: relative;
-        overflow: hidden;
-        flex-shrink: 0;
     }
     
-    .record-button::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-        opacity: 0;
-        transition: opacity var(--transition-base);
-    }
-    
-    .record-button:hover {
-        transform: scale(1.05);
+    .btn-primary:hover {
+        transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
     }
     
-    .record-button:hover::before {
-        opacity: 1;
+    .btn-primary:active {
+        transform: translateY(0);
     }
     
-    .record-button:active {
-        transform: scale(0.98);
-    }
-    
-    .record-button.recording {
-        animation: recordPulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes recordPulse {
-        0%, 100% {
-            box-shadow: 0 0 0 0 rgba(15, 76, 117, 0.7);
-        }
-        50% {
-            box-shadow: 0 0 0 20px rgba(15, 76, 117, 0);
-        }
-    }
-    
-    /* Stop Button */
-    .stop-button {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: none;
+    .btn-danger {
         background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
         color: white;
-        font-size: 2rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all var(--transition-base);
         box-shadow: var(--shadow-md);
-        flex-shrink: 0;
     }
     
-    .stop-button:hover {
-        transform: scale(1.05);
+    .btn-danger:hover {
+        transform: translateY(-2px);
         box-shadow: var(--shadow-lg);
     }
     
-    .stop-button:active {
-        transform: scale(0.98);
+    .btn-danger:active {
+        transform: translateY(0);
     }
     
-    /* Timers */
-    .timers-container {
+    .btn-secondary {
+        background: var(--bg-card);
+        color: var(--primary);
+        border: 2px solid var(--primary);
+    }
+    
+    .btn-secondary:hover {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .btn .icon {
+        font-size: 1.25rem;
+    }
+    
+    .hidden {
+        display: none !important;
+    }
+    
+    /* Status Indicators */
+    .status-indicators {
         display: flex;
-        flex-direction: column;
-        gap: var(--spacing-xs);
-        min-width: 100px;
+        gap: var(--spacing-lg);
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: var(--spacing-lg);
     }
     
-    .timer {
+    .status-indicator {
         display: flex;
         align-items: center;
         gap: var(--spacing-sm);
-        padding: var(--spacing-xs) var(--spacing-md);
-        border-radius: var(--radius-sm);
-        background: var(--bg-primary);
-        font-family: 'Courier New', monospace;
-        font-weight: 700;
-        font-size: 1rem;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-sm);
     }
     
-    .timer-label {
-        font-size: 0.75rem;
+    .status-indicator.listening {
+        border-color: var(--accent);
+        background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(255, 135, 135, 0.05) 100%);
+    }
+    
+    .status-label {
+        font-size: 0.875rem;
         font-weight: 600;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: var(--text-secondary);
-        font-family: 'DM Sans', sans-serif;
     }
     
     .timer-value {
+        font-size: 1.125rem;
+        font-weight: 700;
         color: var(--primary);
+        font-variant-numeric: tabular-nums;
     }
     
-    #silence-timer .timer-value {
-        color: var(--accent);
+    .listening-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse-dot 1.5s ease-in-out infinite;
     }
     
-    /* Listening Indicator */
-    .listening-indicator {
-        display: flex;
-        align-items: center;
-        gap: var(--spacing-md);
-        padding: var(--spacing-md) var(--spacing-lg);
-        background: linear-gradient(135deg, rgba(15, 76, 117, 0.05) 0%, rgba(27, 108, 168, 0.05) 100%);
-        border-radius: var(--radius-lg);
-        border: 2px dashed var(--primary-light);
-        flex: 1;
-        min-width: 200px;
-    }
-    
-    .listening-text {
-        font-weight: 600;
-        color: var(--primary);
-        font-size: 1rem;
-    }
-    
-    .audio-visualizer {
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        height: 24px;
-    }
-    
-    .visualizer-bar {
-        width: 3px;
-        background: var(--primary);
-        border-radius: var(--radius-full);
-        animation: visualizerPulse 0.8s ease-in-out infinite;
-    }
-    
-    .visualizer-bar:nth-child(1) { animation-delay: 0s; }
-    .visualizer-bar:nth-child(2) { animation-delay: 0.1s; }
-    .visualizer-bar:nth-child(3) { animation-delay: 0.2s; }
-    .visualizer-bar:nth-child(4) { animation-delay: 0.3s; }
-    .visualizer-bar:nth-child(5) { animation-delay: 0.4s; }
-    
-    @keyframes visualizerPulse {
-        0%, 100% { height: 4px; opacity: 0.5; }
-        50% { height: 20px; opacity: 1; }
+    @keyframes pulse-dot {
+        0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.2);
+            opacity: 0.7;
+        }
     }
     
     /* Text Input */
     .text-input-wrapper {
-        flex: 1;
+        margin-top: var(--spacing-lg);
         display: flex;
-        gap: var(--spacing-sm);
-        min-width: 200px;
+        gap: var(--spacing-md);
     }
     
-    .text-input {
+    .text-input-wrapper input {
         flex: 1;
         padding: var(--spacing-md) var(--spacing-lg);
         border: 2px solid var(--border);
-        border-radius: var(--radius-lg);
-        font-family: inherit;
+        border-radius: var(--radius-md);
         font-size: 1rem;
-        color: var(--text-primary);
+        font-family: inherit;
         background: var(--bg-card);
+        color: var(--text-primary);
         transition: all var(--transition-fast);
     }
     
-    .text-input:focus {
+    .text-input-wrapper input:focus {
         outline: none;
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(15, 76, 117, 0.1);
     }
     
-    .text-input::placeholder {
+    .text-input-wrapper input::placeholder {
         color: var(--text-light);
-    }
-    
-    .send-button {
-        padding: var(--spacing-md) var(--spacing-xl);
-        border: none;
-        border-radius: var(--radius-lg);
-        background: var(--bg-user-msg);
-        color: white;
-        font-weight: 600;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all var(--transition-base);
-        box-shadow: var(--shadow-sm);
-        white-space: nowrap;
-    }
-    
-    .send-button:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-md);
-    }
-    
-    .send-button:active {
-        transform: translateY(0);
     }
     
     /* Notification Toast */
     .notification-toast {
         position: fixed;
-        bottom: var(--spacing-xl);
+        top: var(--spacing-xl);
         right: var(--spacing-xl);
-        padding: var(--spacing-md) var(--spacing-lg);
-        border-radius: var(--radius-lg);
+        padding: var(--spacing-md) var(--spacing-xl);
+        background: var(--bg-card);
+        border-radius: var(--radius-md);
         box-shadow: var(--shadow-xl);
-        font-weight: 500;
-        animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        font-weight: 600;
         z-index: 1000;
+        animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        border-left: 4px solid var(--success);
+        max-width: 400px;
     }
     
     @keyframes slideInRight {
         from {
             opacity: 0;
-            transform: translateX(100px);
+            transform: translateX(100%);
         }
         to {
             opacity: 1;
@@ -666,17 +612,17 @@
         }
     }
     
-    .notification-toast.success {
-        background: var(--success);
-        color: white;
-    }
-    
     .notification-toast.error {
-        background: var(--accent);
-        color: white;
+        border-left-color: var(--accent);
+        color: var(--accent);
     }
     
-    /* Responsive Design */
+    .notification-toast.success {
+        border-left-color: var(--success);
+        color: var(--success);
+    }
+    
+    /* Responsive */
     @media (max-width: 768px) {
         .container {
             padding: var(--spacing-md);
@@ -691,364 +637,347 @@
         }
         
         .messages-area {
-            height: 400px;
+            height: 500px;
         }
         
         .message-bubble {
             max-width: 85%;
         }
         
-        .controls-wrapper {
+        .controls {
             flex-direction: column;
-            align-items: stretch;
+            width: 100%;
         }
         
-        .record-button,
-        .stop-button {
-            width: 60px;
-            height: 60px;
-            font-size: 1.75rem;
+        .btn {
+            width: 100%;
         }
         
-        .listening-indicator,
         .text-input-wrapper {
-            min-width: 100%;
+            flex-direction: column;
         }
         
-        .timers-container {
-            flex-direction: row;
-            justify-content: center;
-            min-width: 100%;
+        .notification-toast {
+            right: var(--spacing-md);
+            left: var(--spacing-md);
+            max-width: none;
         }
-    }
-    
-    /* Utility Classes */
-    .hidden {
-        display: none !important;
-    }
-    
-    .sr-only {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-        border-width: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1><span class="emoji">🎤</span> Voice Chat</h1>
-        <p class="subtitle">Speak naturally — pauses create messages automatically</p>
-    </div>
     
-    <!-- Settings Panel -->
     <div class="settings-panel">
         <div class="settings-grid">
             <div class="setting-item">
-                <label for="source-lang">Source Language</label>
-                <select id="source-lang">
-                    <option value="ne">नेपाली (Nepali)</option>
+                <label for="sourceLang">Your Language</label>
+                <select id="sourceLang">
+                    <option value="mixed">Nepali + English (Mixed)</option>
+                    <option value="ne">Nepali Only</option>
+                    <option value="en">English Only</option>
+                </select>
+            </div>
+            
+            <div class="setting-item">
+                <label for="targetLang">Translate To</label>
+                <select id="targetLang">
                     <option value="en">English</option>
-                    <option value="mixed" selected>Mixed (Both)</option>
+                    <option value="ne">Nepali</option>
                 </select>
             </div>
             
             <div class="setting-item">
-                <label for="target-lang">Target Language</label>
-                <select id="target-lang">
-                    <option value="ne">नेपाली (Nepali)</option>
-                    <option value="en" selected>English</option>
-                </select>
-            </div>
-            
-            <div class="setting-item">
-                <label>Playback</label>
+                <label>Options</label>
                 <div class="checkbox-wrapper">
-                    <input type="checkbox" id="auto-play" checked>
-                    <span>Auto-play translation</span>
+                    <input type="checkbox" id="autoPlay" checked>
+                    <span>Auto-play translations</span>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Chat Container -->
     <div class="chat-container">
-        <!-- Messages Area -->
-        <div class="messages-area" id="messages">
-            <div class="empty-state">
+        <div id="messagesArea" class="messages-area">
+            <div class="empty-state" id="emptyState">
                 <div class="empty-state-icon">💬</div>
-                <div class="empty-state-text">No messages yet</div>
-                <div class="empty-state-subtext">Click the microphone to start your conversation</div>
+                <div class="empty-state-text">Start a conversation to begin</div>
             </div>
         </div>
         
-        <!-- Control Panel -->
-        <div class="control-panel">
-            <div class="controls-wrapper">
-                <!-- Start Button -->
-                <button class="record-button" id="start-btn" aria-label="Start conversation">
-                    🎙️
+        <div class="control-bar">
+            <div class="controls">
+                <button id="startBtn" class="btn btn-primary">
+                    <span class="icon">🎤</span>
+                    <span>Start Session</span>
                 </button>
-                
-                <!-- Stop Button -->
-                <button class="stop-button hidden" id="stop-btn" aria-label="Stop conversation">
-                    ⏹️
+                <button id="stopBtn" class="btn btn-danger hidden">
+                    <span class="icon">⏹️</span>
+                    <span>Stop Session</span>
                 </button>
-                
-                <!-- Timers -->
-                <div class="timers-container">
-                    <div class="timer hidden" id="session-timer">
-                        <span class="timer-label">Session</span>
-                        <span class="timer-value">0:00</span>
-                    </div>
-                    <div class="timer hidden" id="silence-timer">
-                        <span class="timer-label">Pause</span>
-                        <span class="timer-value">--</span>
-                    </div>
+            </div>
+            
+            <div class="status-indicators">
+                <div id="listeningIndicator" class="status-indicator listening hidden">
+                    <div class="listening-dot"></div>
+                    <span class="status-label">Listening</span>
                 </div>
                 
-                <!-- Listening Indicator -->
-                <div class="listening-indicator hidden" id="listening-indicator">
-                    <span class="listening-text">Listening...</span>
-                    <div class="audio-visualizer">
-                        <div class="visualizer-bar"></div>
-                        <div class="visualizer-bar"></div>
-                        <div class="visualizer-bar"></div>
-                        <div class="visualizer-bar"></div>
-                        <div class="visualizer-bar"></div>
-                    </div>
+                <div id="sessionTimer" class="status-indicator hidden">
+                    <span class="status-label">Session Time</span>
+                    <span class="timer-value">0:00</span>
                 </div>
                 
-                <!-- Text Input -->
-                <div class="text-input-wrapper hidden" id="text-input-wrapper">
-                    <input 
-                        type="text" 
-                        class="text-input" 
-                        id="text-input" 
-                        placeholder="Or type a message..."
-                        aria-label="Type a message"
-                    />
-                    <button class="send-button" id="send-text-btn">Send</button>
+                <div id="silenceTimer" class="status-indicator hidden">
+                    <span class="status-label">Auto-send in</span>
+                    <span class="timer-value">--</span>
                 </div>
+            </div>
+            
+            <div id="textInputWrapper" class="text-input-wrapper hidden">
+                <input type="text" id="textInput" placeholder="Type a message or speak...">
+                <button id="sendTextBtn" class="btn btn-secondary">
+                    <span>Send</span>
+                </button>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-    // Configuration
-    const chatId = '{{ chat_id }}';
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socket = new WebSocket(`${protocol}//${window.location.host}/ws/audio-chat/${chatId}/`);
+    const chatId = '{{ chat.id }}';
+    const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/chat/${chatId}/`);
     
-    // Voice Activity Detection settings
-    const SPEECH_THRESHOLD = 40;
-    const SILENCE_CHECKS_NEEDED = 35; // ~5 seconds
-    const CHECK_INTERVAL = 150;
+    // UI Elements
+    const messagesArea = document.getElementById('messagesArea');
+    const emptyState = document.getElementById('emptyState');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const sourceLangSelect = document.getElementById('sourceLang');
+    const targetLangSelect = document.getElementById('targetLang');
+    const autoPlayCheckbox = document.getElementById('autoPlay');
+    const listeningIndicator = document.getElementById('listeningIndicator');
+    const sessionTimer = document.getElementById('sessionTimer');
+    const silenceTimer = document.getElementById('silenceTimer');
+    const textInputWrapper = document.getElementById('textInputWrapper');
+    const textInput = document.getElementById('textInput');
+    const sendTextBtn = document.getElementById('sendTextBtn');
     
     // State
+    let isSessionActive = false;
     let mediaRecorder = null;
     let audioContext = null;
     let analyser = null;
-    let isSessionActive = false;
-    let recordingChunks = [];
+    let dataArray = null;
     let sessionTimerInterval = null;
     let silenceTimerInterval = null;
+    let recordingChunks = [];
+    let userIsSpeaking = false;
     let consecutiveSilenceChecks = 0;
     let currentMessageTempId = null;
     let currentMessageHasGoodText = false;
-    let userIsSpeaking = false;
     
-    // DOM Elements
-    const startBtn = document.getElementById('start-btn');
-    const stopBtn = document.getElementById('stop-btn');
-    const sessionTimer = document.getElementById('session-timer');
-    const silenceTimer = document.getElementById('silence-timer');
-    const listeningIndicator = document.getElementById('listening-indicator');
-    const textInputWrapper = document.getElementById('text-input-wrapper');
-    const textInput = document.getElementById('text-input');
-    const sendTextBtn = document.getElementById('send-text-btn');
-    const messagesDiv = document.getElementById('messages');
-    const sourceLangSelect = document.getElementById('source-lang');
-    const targetLangSelect = document.getElementById('target-lang');
-    const autoPlayCheckbox = document.getElementById('auto-play');
+    // FIXED: Added flag to prevent multiple auto-sends
+    let isProcessingAudio = false;
     
-    // WebSocket Handlers
+    const SILENCE_THRESHOLD = 0.01;
+    const SILENCE_CHECKS_NEEDED = 5;
+    const CHECK_INTERVAL = 1000;
+    
+    // WebSocket handlers
     socket.onopen = () => {
-        console.log('✅ WebSocket connected');
-    };
-    
-    socket.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        handleMessage(data);
-    };
-    
-    socket.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        showNotification('Connection error. Please refresh the page.', 'error');
+        console.log('WebSocket connected');
+        showNotification('🟢 Connected', 'success');
     };
     
     socket.onclose = () => {
         console.log('WebSocket disconnected');
+        showNotification('🔴 Disconnected - Please refresh', 'error');
     };
     
-    // Handle incoming messages
-    function handleMessage(data) {
-        const type = data.type;
-        
-        if (type === 'message') {
-            displayMessage(data.data);
-        } else if (type === 'update') {
-            updateMessage(data.data);
-        } else if (type === 'error') {
-            showNotification(data.message, 'error');
-        }
-    }
+    socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        showNotification('Connection error occurred', 'error');
+    };
     
-    // Display message in chat
+    socket.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        
+        if (data.type === 'transcription_update') {
+            updateMessageTranscription(data);
+        } else if (data.type === 'translation_complete') {
+            updateMessageTranslation(data);
+        } else if (data.type === 'assistant_message') {
+            displayMessage(data.message);
+        } else if (data.type === 'translation_audio') {
+            updateMessageAudio(data);
+        }
+    };
+    
+    // Display message
     function displayMessage(msg) {
-        // Remove empty state
-        const emptyState = messagesDiv.querySelector('.empty-state');
-        if (emptyState) emptyState.remove();
+        emptyState.classList.add('hidden');
         
-        const messageEl = document.createElement('div');
-        messageEl.className = `message ${msg.role}`;
-        messageEl.id = `msg-${msg.id || msg.message_id}`;
-        
-        const bubble = document.createElement('div');
-        bubble.className = 'message-bubble';
-        
-        // Message text
-        const textEl = document.createElement('div');
-        textEl.className = 'message-text';
-        textEl.textContent = msg.original_text || '🎤 Listening...';
-        bubble.appendChild(textEl);
-        
-        // Original audio
-        if (msg.audio_file_url) {
-            const audioDiv = document.createElement('div');
-            audioDiv.className = 'message-audio';
-            audioDiv.innerHTML = `
-                <div class="audio-label">Original Recording</div>
-                <audio controls src="${msg.audio_file_url}"></audio>
-            `;
-            bubble.appendChild(audioDiv);
+        let messageEl = document.getElementById(msg.id);
+        if (!messageEl) {
+            messageEl = document.createElement('div');
+            messageEl.id = msg.id;
+            messageEl.className = `message ${msg.role}`;
+            messagesArea.appendChild(messageEl);
         }
         
-        // Status
-        const statusEl = document.createElement('div');
-        statusEl.className = 'message-status';
-        statusEl.innerHTML = `
-            <span class="status-badge ${msg.status}">
-                <span class="status-dot"></span>
-                ${msg.status}
-            </span>
-        `;
-        bubble.appendChild(statusEl);
+        const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : new Date().toLocaleTimeString();
         
-        messageEl.appendChild(bubble);
-        messagesDiv.appendChild(messageEl);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        let statusHTML = '';
+        if (msg.status === 'transcribing') {
+            statusHTML = `
+                <div class="message-status">
+                    <span class="status-badge transcribing">
+                        <span class="status-dot"></span>
+                        transcribing
+                    </span>
+                </div>
+            `;
+        } else if (msg.status === 'translating') {
+            statusHTML = `
+                <div class="message-status">
+                    <span class="status-badge translating">
+                        <span class="status-dot"></span>
+                        translating
+                    </span>
+                </div>
+            `;
+        }
+        
+        messageEl.innerHTML = `
+            <div class="message-bubble">
+                <div class="message-header">
+                    <span class="message-role">${msg.role}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-text">${msg.original_text || ''}</div>
+                ${msg.translated_text ? `<div class="message-translation">${msg.translated_text}</div>` : ''}
+                ${msg.translation_audio ? `<div class="message-audio"><audio controls src="${msg.translation_audio}"></audio></div>` : ''}
+                ${statusHTML}
+            </div>
+        `;
+        
+        messagesArea.scrollTop = messagesArea.scrollHeight;
     }
     
-    // Update existing message
-    function updateMessage(data) {
-        const msgEl = document.getElementById(`msg-${data.message_id}`);
+    // Update message with transcription
+    function updateMessageTranscription(data) {
+        const msgEl = document.getElementById(data.temp_id);
+        if (!msgEl) return;
+        
+        const textEl = msgEl.querySelector('.message-text');
+        const statusEl = msgEl.querySelector('.message-status');
+        
+        if (textEl) {
+            textEl.textContent = data.text;
+        }
+        
+        if (data.is_final && statusEl) {
+            statusEl.innerHTML = `
+                <span class="status-badge completed">
+                    ✓ transcribed
+                </span>
+            `;
+            currentMessageHasGoodText = true;
+        }
+    }
+    
+    // Update message with translation
+    function updateMessageTranslation(data) {
+        const msgEl = document.getElementById(data.message_id);
         if (!msgEl) return;
         
         const bubble = msgEl.querySelector('.message-bubble');
-        const textEl = bubble.querySelector('.message-text');
-        const statusEl = bubble.querySelector('.message-status');
+        const existingTranslation = bubble.querySelector('.message-translation');
         
-        // Update text
-        if (data.original_text) {
-            const isFailure = data.original_text.includes('Transcription failed') || 
-                             data.original_text.startsWith('[');
-            const currentText = textEl.textContent;
-            
-            if (!isFailure || !currentMessageHasGoodText || currentText.includes('🎤')) {
-                textEl.textContent = data.original_text;
-                if (!isFailure) {
-                    currentMessageHasGoodText = true;
-                }
-            }
+        if (existingTranslation) {
+            existingTranslation.textContent = data.translated_text;
+        } else {
+            const translationDiv = document.createElement('div');
+            translationDiv.className = 'message-translation';
+            translationDiv.textContent = data.translated_text;
+            bubble.insertBefore(translationDiv, bubble.querySelector('.message-status') || null);
         }
         
-        // Update status
-        if (data.status) {
+        const statusEl = bubble.querySelector('.message-status');
+        if (statusEl) {
             statusEl.innerHTML = `
-                <span class="status-badge ${data.status}">
-                    <span class="status-dot"></span>
-                    ${data.status}
+                <span class="status-badge completed">
+                    ✓ translated
                 </span>
             `;
         }
+    }
+    
+    // Update message with audio
+    function updateMessageAudio(data) {
+        const msgEl = document.getElementById(data.message_id);
+        if (!msgEl) return;
         
-        // Add translated audio
-        if ((data.status === 'completed' || data.status === 'audio_ready') && data.translated_audio_url) {
-            if (!bubble.querySelector('.message-audio-translated')) {
-                const audioDiv = document.createElement('div');
-                audioDiv.className = 'message-audio message-audio-translated';
-                audioDiv.innerHTML = `
-                    <div class="audio-label">Translation</div>
-                    <audio controls src="${data.translated_audio_url}"></audio>
-                `;
-                bubble.appendChild(audioDiv);
-                
-                // Auto-play if enabled
-                if (autoPlayCheckbox.checked) {
-                    const audio = audioDiv.querySelector('audio');
-                    audio.play().catch(e => console.log('Auto-play prevented:', e));
-                }
-            }
+        const bubble = msgEl.querySelector('.message-bubble');
+        const existingAudio = bubble.querySelector('.message-audio');
+        
+        if (existingAudio) {
+            existingAudio.remove();
+        }
+        
+        const audioDiv = document.createElement('div');
+        audioDiv.className = 'message-audio';
+        audioDiv.innerHTML = `<audio controls src="${data.audio_url}"></audio>`;
+        bubble.insertBefore(audioDiv, bubble.querySelector('.message-status') || null);
+        
+        if (autoPlayCheckbox.checked) {
+            const audio = audioDiv.querySelector('audio');
+            audio.play().catch(e => console.log('Auto-play failed:', e));
         }
     }
     
-    // Voice Activity Detection
+    // FIXED: Setup silence detection
     function setupSilenceDetection(stream) {
-        if (!audioContext) {
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        
-        const source = audioContext.createMediaStreamSource(stream);
+        audioContext = new AudioContext();
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.8;
+        const source = audioContext.createMediaStreamSource(stream);
         source.connect(analyser);
+        
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.fftSize;
+        dataArray = new Uint8Array(bufferLength);
         
         monitorAudioLevel();
     }
     
+    // FIXED: Monitor audio level
     function monitorAudioLevel() {
-        if (!isSessionActive || !analyser) return;
+        if (!isSessionActive || !analyser || !dataArray) return;
         
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(dataArray);
+        analyser.getByteTimeDomainData(dataArray);
         
-        // Calculate RMS
         let sum = 0;
         for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i] * dataArray[i];
+            const normalized = (dataArray[i] - 128) / 128;
+            sum += normalized * normalized;
         }
         const rms = Math.sqrt(sum / dataArray.length);
         
-        const isSpeech = rms > SPEECH_THRESHOLD;
-        
-        if (isSpeech) {
+        if (rms > SILENCE_THRESHOLD) {
             consecutiveSilenceChecks = 0;
             
             if (!userIsSpeaking) {
                 userIsSpeaking = true;
+                
                 if (!currentMessageTempId) {
-                    currentMessageTempId = 'msg-' + Date.now();
+                    currentMessageTempId = 'temp_' + Date.now();
+                    currentMessageHasGoodText = false;
+                    
                     displayMessage({
                         id: currentMessageTempId,
                         role: 'user',
@@ -1064,13 +993,13 @@
         } else {
             consecutiveSilenceChecks++;
             
+            // FIXED: Only auto-send if we have good audio and aren't already processing
             if (consecutiveSilenceChecks >= SILENCE_CHECKS_NEEDED && userIsSpeaking) {
-                if (recordingChunks.length > 0) {
+                if (recordingChunks.length > 0 && !isProcessingAudio) {
                     autoSendAudio();
                 }
                 userIsSpeaking = false;
-                currentMessageTempId = null;
-                currentMessageHasGoodText = false;
+                // FIXED: Don't reset temp ID here - let autoSendAudio handle it
                 consecutiveSilenceChecks = 0;
             } else if (consecutiveSilenceChecks === 1) {
                 startSilenceTimer();
@@ -1103,18 +1032,21 @@
         consecutiveSilenceChecks = 0;
     }
     
-    // Auto-send audio after pause
+    // FIXED: Auto-send audio after pause
     function autoSendAudio() {
-        if (!isSessionActive || recordingChunks.length === 0) {
+        // FIXED: Prevent multiple simultaneous sends
+        if (!isSessionActive || recordingChunks.length === 0 || isProcessingAudio) {
             stopSilenceTimer();
             return;
         }
         
-        const blob = new Blob(recordingChunks, { type: 'audio/wav' });
-        recordingChunks = [];
-        consecutiveSilenceChecks = 0;
+        isProcessingAudio = true;
         
+        const blob = new Blob(recordingChunks, { type: 'audio/wav' });
         const tempId = currentMessageTempId;
+        
+        // FIXED: Clear chunks immediately to prevent re-sending
+        recordingChunks = [];
         
         const reader = new FileReader();
         reader.onload = () => {
@@ -1143,16 +1075,21 @@
                         }
                     }
                 }
+                
+                // FIXED: Reset state after successful send
+                currentMessageTempId = null;
+                currentMessageHasGoodText = false;
+                isProcessingAudio = false;
+                
             } catch (e) {
                 console.error('Error sending audio:', e);
                 showNotification('Error sending audio message', 'error');
+                isProcessingAudio = false;
             }
         };
         reader.readAsDataURL(blob);
         
         stopSilenceTimer();
-        currentMessageTempId = null;
-        currentMessageHasGoodText = false;
     }
     
     // Start session
@@ -1174,9 +1111,10 @@
             consecutiveSilenceChecks = 0;
             currentMessageTempId = null;
             currentMessageHasGoodText = false;
+            isProcessingAudio = false; // FIXED: Reset processing flag
             
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
+                if (e.data.size > 0 && isSessionActive) { // FIXED: Only push if session is active
                     recordingChunks.push(e.data);
                 }
             };
@@ -1200,31 +1138,51 @@
         }
     });
     
-    // Stop session
+    // FIXED: Stop session
     stopBtn.addEventListener('click', () => {
         if (!isSessionActive) return;
         
         isSessionActive = false;
         
-        if (recordingChunks.length > 0) {
+        // FIXED: Send any remaining audio before stopping
+        if (recordingChunks.length > 0 && !isProcessingAudio) {
             autoSendAudio();
         }
         
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        }
-        
-        stopSilenceTimer();
-        stopSessionTimer();
-        
-        // Update UI
-        startBtn.classList.remove('hidden');
-        stopBtn.classList.add('hidden');
-        textInputWrapper.classList.add('hidden');
-        listeningIndicator.classList.add('hidden');
-        
-        showNotification('✅ Session ended', 'success');
+        // FIXED: Wait a moment for audio to finish sending
+        setTimeout(() => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+            
+            stopSilenceTimer();
+            stopSessionTimer();
+            
+            // FIXED: Clean up audio context
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                analyser = null;
+                dataArray = null;
+            }
+            
+            // FIXED: Reset all state
+            recordingChunks = [];
+            userIsSpeaking = false;
+            consecutiveSilenceChecks = 0;
+            currentMessageTempId = null;
+            currentMessageHasGoodText = false;
+            isProcessingAudio = false;
+            
+            // Update UI
+            startBtn.classList.remove('hidden');
+            stopBtn.classList.add('hidden');
+            textInputWrapper.classList.add('hidden');
+            listeningIndicator.classList.add('hidden');
+            
+            showNotification('✅ Session ended', 'success');
+        }, 100);
     });
     
     // Session timer
@@ -1256,7 +1214,7 @@
             socket.send(JSON.stringify({
                 type: 'message',
                 text: text,
-                language: sourceLangSelect.value
+                language: "nepali" // FIXED: Set language for text messages
             }));
             textInput.value = '';
         }
@@ -1267,18 +1225,6 @@
             e.preventDefault();
             sendTextBtn.click();
         }
-    });
-    
-    // Settings changes
-    [sourceLangSelect, targetLangSelect, autoPlayCheckbox].forEach(el => {
-        el.addEventListener('change', () => {
-            socket.send(JSON.stringify({
-                type: 'settings_update',
-                source_language: sourceLangSelect.value,
-                target_language: targetLangSelect.value,
-                auto_play_translation: autoPlayCheckbox.checked
-            }));
-        });
     });
     
     // Notification system
