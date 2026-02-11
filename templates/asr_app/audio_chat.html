@@ -437,6 +437,7 @@
     let continuousSendInterval = null;
     let speechDetectedSinceLastSend = false;
     let currentMessageTempId = null; // Track message for continuous sends
+    let currentMessageHasGoodText = false; // Track if message has real transcription
     
     // Voice Activity Detection thresholds
     const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
@@ -547,12 +548,30 @@
         // Update status
         statusEl.innerHTML = `<span class="status-badge status-${data.status}">${data.status}</span>`;
         
-        // Update original text if available - IMPORTANT!
+        // Update original text if available - but DON'T overwrite good text with failures
         if (data.original_text) {
-            if (textEl) {
-                textEl.textContent = data.original_text;
+            const currentText = textEl.textContent;
+            const isFailure = data.original_text.includes('Transcription failed') || data.original_text.startsWith('[');
+            const hasGoodText = currentMessageHasGoodText;
+            
+            // Only update if:
+            // 1. It's new good text (not a failure), OR
+            // 2. We haven't received good text yet, OR
+            // 3. We're updating from a status placeholder like "(Transcribing...)"
+            if (!isFailure || !hasGoodText || currentText.includes('(')) {
+                if (textEl) {
+                    textEl.textContent = data.original_text;
+                }
+                console.log('Updated message with text:', data.original_text);
+                
+                // Mark that we have good text if this isn't a failure
+                if (!isFailure) {
+                    currentMessageHasGoodText = true;
+                    console.log('✓ Message has good transcription, will not overwrite');
+                }
+            } else {
+                console.log('⏭️ Skipping update - keeping good text, ignoring failed transcription');
             }
-            console.log('Updated message with text:', data.original_text);
         }
         
         // Add translated audio if available
@@ -655,6 +674,7 @@
                     console.log('Stopped continuous send');
                 }
                 currentMessageTempId = null; // Reset for next message
+                currentMessageHasGoodText = false; // Reset flag for next message
                 consecutiveSilenceChecks = 0;
             } else if (consecutiveSilenceChecks === 1) {
                 // Just started silence
@@ -701,6 +721,7 @@
             lastSpeechTime = Date.now();
             speechDetectedSinceLastSend = false;
             currentMessageTempId = null;
+            currentMessageHasGoodText = false;
             
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
