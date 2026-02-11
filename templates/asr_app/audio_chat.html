@@ -3,27 +3,31 @@
 
 {% block title %}Audio Chat - Nepali + English ASR{% endblock %}
 
+{% block container_class %}-sm{% endblock %}
+
 {% block extra_css %}
 <style>
     .audio-chat-container {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 80px);
-        background: #f8f9fa;
+        gap: 20px;
     }
     
-    .chat-header {
-        padding: 20px;
-        background: white;
-        border-bottom: 2px solid #667eea;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    .page-header {
+        margin-bottom: 20px;
     }
     
-    .chat-header h1 {
-        margin: 0 0 15px 0;
+    .page-header h2 {
         font-size: 28px;
+        margin: 0 0 8px 0;
         color: #1a1a1a;
         font-weight: 700;
+    }
+    
+    .page-header p {
+        font-size: 15px;
+        color: #666;
+        margin: 0;
     }
     
     .chat-settings {
@@ -31,6 +35,11 @@
         gap: 20px;
         align-items: center;
         flex-wrap: wrap;
+        margin: 20px 0;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .setting-group {
@@ -42,13 +51,13 @@
     .setting-group label {
         margin: 0;
         font-size: 14px;
-        color: #444;
+        color: #333;
         font-weight: 600;
     }
     
     .setting-group select {
         padding: 8px 12px;
-        border: 2px solid #ddd;
+        border: 1px solid #ddd;
         border-radius: 6px;
         font-size: 14px;
         background: white;
@@ -65,12 +74,16 @@
     
     .chat-messages {
         flex: 1;
+        min-height: 300px;
+        max-height: 500px;
         overflow-y: auto;
         padding: 20px;
+        background: white;
+        border-radius: 8px;
         display: flex;
         flex-direction: column;
         gap: 12px;
-        background: #f8f9fa;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .message {
@@ -100,10 +113,10 @@
     
     .message-content {
         max-width: 70%;
-        padding: 14px 16px;
-        border-radius: 14px;
-        background: white;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: #f0f2f5;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
     
     .message.user .message-content {
@@ -112,9 +125,9 @@
     }
     
     .message-text {
-        margin: 0 0 8px 0;
-        font-size: 15px;
-        line-height: 1.5;
+        margin: 0 0 6px 0;
+        font-size: 14px;
+        line-height: 1.4;
         color: #222;
     }
     
@@ -122,45 +135,38 @@
         color: white;
     }
     
-    .message-audio {
-        margin-top: 8px;
-    }
-    
     .message-audio audio {
         max-width: 100%;
-        border-radius: 6px;
-        height: 32px;
+        border-radius: 4px;
+        height: 28px;
+        margin: 6px 0;
     }
     
     .message-audio-original,
     .message-audio-translated {
-        font-size: 12px;
-        color: #555;
-        margin-bottom: 8px;
+        font-size: 11px;
+        color: #666;
+        margin: 6px 0;
     }
     
     .message.user .message-audio-original,
     .message.user .message-audio-translated {
-        color: rgba(255, 255, 255, 0.9);
+        color: rgba(255, 255, 255, 0.85);
     }
     
     .message-status {
-        font-size: 12px;
-        margin-top: 6px;
-    }
-    
-    .message.user .message-status {
-        text-align: right;
+        font-size: 11px;
+        margin-top: 4px;
     }
     
     .status-badge {
         display: inline-block;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
     }
     
     .status-pending {
@@ -188,73 +194,67 @@
         color: #842029;
     }
     
-    .chat-input-area {
-        padding: 16px 20px;
+    .card {
         background: white;
-        border-top: 2px solid #e0e0e0;
-        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .input-controls {
         display: flex;
         gap: 12px;
         align-items: center;
+        flex-wrap: wrap;
     }
     
     .record-button {
-        width: 56px;
-        height: 56px;
+        width: 60px;
+        height: 60px;
         border-radius: 50%;
         border: none;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        font-size: 24px;
+        font-size: 28px;
         cursor: pointer;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         flex-shrink: 0;
     }
     
     .record-button:hover {
-        transform: scale(1.08);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     
     .record-button:active {
-        transform: scale(0.96);
-    }
-    
-    @keyframes pulse {
-        0%, 100% {
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
-        }
-        50% {
-            box-shadow: 0 4px 24px rgba(255, 107, 107, 0.7);
-        }
+        transform: scale(0.95);
     }
     
     .recording-timer {
         font-size: 13px;
         font-weight: 700;
         color: #667eea;
-        min-width: 70px;
+        min-width: 75px;
         text-align: center;
         flex-shrink: 0;
+        font-family: 'Monaco', 'Courier', monospace;
     }
     
     .recording-timer#silence-timer {
-        color: #ff9800;
+        color: #ff6b6b;
     }
     
     .input-text {
         flex: 1;
-        padding: 12px 16px;
-        border: 2px solid #ddd;
-        border-radius: 24px;
+        min-width: 150px;
+        padding: 12px 14px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
         font-size: 14px;
         font-family: inherit;
         transition: all 0.3s ease;
@@ -272,22 +272,22 @@
     }
     
     .send-button {
-        padding: 10px 22px;
+        padding: 10px 20px;
         border: none;
-        border-radius: 24px;
+        border-radius: 6px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         cursor: pointer;
         font-weight: 600;
         font-size: 14px;
         transition: all 0.3s ease;
-        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 1px 3px rgba(102, 126, 234, 0.2);
         flex-shrink: 0;
     }
     
     .send-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
     }
     
     .send-button:active {
@@ -303,8 +303,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 3px;
-        height: 24px;
+        gap: 2px;
+        height: 20px;
     }
     
     .waveform-bar {
@@ -319,12 +319,15 @@
     .waveform-bar:nth-child(3) { animation-delay: 0.2s; }
     
     @keyframes wave {
-        0%, 100% { height: 4px; }
-        50% { height: 16px; }
+        0%, 100% { height: 3px; }
+        50% { height: 14px; }
     }
     
     #listening-indicator {
         gap: 8px;
+        font-size: 13px;
+        color: #667eea;
+        font-weight: 600;
     }
     
     @media (max-width: 768px) {
@@ -336,15 +339,10 @@
             gap: 12px;
         }
         
-        .setting-group {
-            gap: 6px;
-            font-size: 13px;
-        }
-        
         .record-button {
-            width: 48px;
-            height: 48px;
-            font-size: 20px;
+            width: 52px;
+            height: 52px;
+            font-size: 24px;
         }
     }
 </style>
@@ -352,49 +350,57 @@
 
 {% block content %}
 <div class="audio-chat-container">
-    <!-- Chat Header -->
-    <div class="chat-header">
-        <h1>🎤 Audio Chat</h1>
-        <div class="chat-settings">
-            <div class="setting-group">
-                <label for="source-lang">Source:</label>
-                <select id="source-lang">
-                    <option value="ne">नेपाली (Nepali)</option>
-                    <option value="en">English</option>
-                    <option value="mixed" selected>Mixed</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label for="target-lang">Target:</label>
-                <select id="target-lang">
-                    <option value="ne">नेपाली (Nepali)</option>
-                    <option value="en" selected>English</option>
-                </select>
-            </div>
-            <div class="setting-group">
-                <label>
-                    <input type="checkbox" id="auto-play" checked>
-                    Auto-play Translation
-                </label>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h2>🎤 Audio Chat - Live Translation</h2>
+        <p>Speak naturally - auto-detects pauses and sends messages</p>
+    </div>
+    
+    <!-- Settings -->
+    <div class="chat-settings">
+        <div class="setting-group">
+            <label for="source-lang">Source:</label>
+            <select id="source-lang">
+                <option value="ne">नेपाली (Nepali)</option>
+                <option value="en">English</option>
+                <option value="mixed" selected>Mixed</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label for="target-lang">Target:</label>
+            <select id="target-lang">
+                <option value="ne">नेपाली (Nepali)</option>
+                <option value="en" selected>English</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label>
+                <input type="checkbox" id="auto-play" checked>
+                Auto-play Translation
+            </label>
+        </div>
+    </div>
+    
+    <!-- Messages Card -->
+    <div class="card">
+        <div class="chat-messages" id="messages">
+            <div style="text-align: center; color: #999; padding: 40px 20px;">
+                <p>👂 No messages yet. Click Start to begin!</p>
             </div>
         </div>
     </div>
     
-    <!-- Messages Area -->
-    <div class="chat-messages" id="messages"></div>
-    
-    <!-- Input Area -->
-    <div class="chat-input-area">
+    <!-- Input Card -->
+    <div class="card">
         <div class="input-controls">
             <button class="record-button" id="start-btn" title="Start conversation">
-                <span id="start-icon">🎙️</span>
-                <span style="font-size: 12px; margin-top: 4px;">Start</span>
+                🎙️
             </button>
             <span class="recording-timer" id="session-timer" style="display: none;">0:00</span>
-            <span class="recording-timer" id="silence-timer" style="display: none; color: #ff9800; margin-left: -5px;">Silence: 0s</span>
-            <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-                <div id="listening-indicator" style="display: none; display: flex; gap: 3px; align-items: center;">
-                    <span style="font-size: 12px; color: #667eea; font-weight: 600;">Listening...</span>
+            <span class="recording-timer" id="silence-timer" style="display: none;">--</span>
+            <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                <div id="listening-indicator" style="display: none;">
+                    <span>Listening...</span>
                     <div class="audio-waveform">
                         <div class="waveform-bar"></div>
                         <div class="waveform-bar"></div>
@@ -402,9 +408,9 @@
                     </div>
                 </div>
             </div>
-            <button class="send-button" id="stop-btn" style="display: none;" title="Stop conversation">Stop</button>
             <input type="text" class="input-text" id="text-input" placeholder="Or type a message..." style="display: none;" />
-            <button class="send-button" id="send-text-btn" style="display: none;" title="Send text message">Send</button>
+            <button class="send-button" id="send-text-btn" style="display: none;">Send</button>
+            <button class="send-button" id="stop-btn" style="display: none; background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);">Stop</button>
         </div>
     </div>
 </div>
@@ -425,8 +431,12 @@
     let sessionTimerInterval = null;
     let silenceDetectionTimeout = null;
     let silenceTimerInterval = null;
-    const SILENCE_THRESHOLD = 50; // Audio level threshold
-    const SILENCE_DURATION = 5000; // 5 seconds of silence to auto-send
+    let silenceStartTime = null;
+    
+    // Improved thresholds for better detection
+    const SILENCE_THRESHOLD = 100;  // Lower = more sensitive to silence
+    const SILENCE_DURATION = 5000;  // 5 seconds of silence to auto-send
+    const CHECK_INTERVAL = 150;     // Check audio level every 150ms
     
     // DOM elements
     const startBtn = document.getElementById('start-btn');
@@ -476,6 +486,10 @@
     
     // Display message
     function displayMessage(msg) {
+        // Remove empty state if exists
+        const emptyState = messagesDiv.querySelector('[style*="No messages"]');
+        if (emptyState) emptyState.remove();
+        
         const messageEl = document.createElement('div');
         messageEl.className = `message ${msg.role}`;
         messageEl.id = `msg-${msg.id || msg.message_id}`;
@@ -487,14 +501,12 @@
         if (msg.audio_file_url) {
             const audioDiv = document.createElement('div');
             audioDiv.className = 'message-audio-original';
-            audioDiv.style.cssText = 'margin-bottom: 10px; font-size: 12px; color: #666;';
             const audioEl = document.createElement('audio');
             audioEl.controls = true;
             audioEl.src = msg.audio_file_url;
-            audioEl.style.cssText = 'width: 100%; max-width: 250px;';
             const label = document.createElement('div');
-            label.textContent = '🎙️ Original Audio';
-            label.style.cssText = 'margin-bottom: 5px; font-weight: 600;';
+            label.textContent = '🎙️ Original';
+            label.style.cssText = 'margin-bottom: 4px; font-weight: 600; font-size: 11px;';
             audioDiv.appendChild(label);
             audioDiv.appendChild(audioEl);
             contentEl.appendChild(audioDiv);
@@ -503,7 +515,6 @@
         // Transcription text
         const textEl = document.createElement('div');
         textEl.className = 'message-text';
-        textEl.style.cssText = 'margin-bottom: 8px;';
         textEl.textContent = msg.original_text || '(Processing...)';
         contentEl.appendChild(textEl);
         
@@ -525,34 +536,32 @@
         
         const contentEl = msgEl.querySelector('.message-content');
         const statusEl = contentEl.querySelector('.message-status');
+        const textEl = contentEl.querySelector('.message-text');
         
         // Update status
         statusEl.innerHTML = `<span class="status-badge status-${data.status}">${data.status}</span>`;
         
-        // Update original text if available
+        // Update original text if available - IMPORTANT!
         if (data.original_text) {
-            const textEl = contentEl.querySelector('.message-text');
             if (textEl) {
                 textEl.textContent = data.original_text;
             }
+            console.log('Updated message with text:', data.original_text);
         }
         
         // Add translated audio if available
         if ((data.status === 'completed' || data.status === 'audio_ready') && data.translated_audio_url) {
-            // Check if already has translation audio
             if (!contentEl.querySelector('.message-audio-translated')) {
                 const audioDiv = document.createElement('div');
                 audioDiv.className = 'message-audio-translated';
-                audioDiv.style.cssText = 'margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 12px; color: #666;';
                 
                 const audioEl = document.createElement('audio');
                 audioEl.controls = true;
                 audioEl.src = data.translated_audio_url;
-                audioEl.style.cssText = 'width: 100%; max-width: 250px;';
                 
                 const label = document.createElement('div');
-                label.textContent = '🔊 Translation Audio';
-                label.style.cssText = 'margin-bottom: 5px; font-weight: 600;';
+                label.textContent = '🔊 Translation';
+                label.style.cssText = 'margin-bottom: 4px; font-weight: 600; font-size: 11px; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(0,0,0,0.1);';
                 
                 audioDiv.appendChild(label);
                 audioDiv.appendChild(audioEl);
@@ -566,7 +575,7 @@
         }
     }
     
-    // Detect audio level for silence detection
+    // Setup silence detection with better accuracy
     function setupSilenceDetection(stream) {
         if (!audioContext) {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -574,46 +583,63 @@
         
         const source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.8;
         source.connect(analyser);
         
         monitorAudioLevel();
     }
     
-    // Monitor audio level and detect silence
+    // Monitor audio level with improved detection
     function monitorAudioLevel() {
         if (!isSessionActive || !analyser) return;
         
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(dataArray);
         
-        // Calculate average level
-        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        // Calculate RMS for better level detection
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i] * dataArray[i];
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
         
-        if (average < SILENCE_THRESHOLD) {
+        // Detect if this is silence
+        const isSilent = rms < SILENCE_THRESHOLD;
+        
+        console.log(`Audio Level: ${rms.toFixed(0)}, Silent: ${isSilent}, Chunks: ${recordingChunks.length}`);
+        
+        if (isSilent) {
             // Silence detected
             if (!silenceDetectionTimeout) {
-                silenceDetectionTimeout = setTimeout(autoSendAudio, SILENCE_DURATION);
+                silenceStartTime = Date.now();
+                silenceDetectionTimeout = setTimeout(() => {
+                    console.log('Silence duration reached - auto-sending');
+                    autoSendAudio();
+                }, SILENCE_DURATION);
                 startSilenceTimer();
             }
         } else {
-            // User is speaking
+            // User is speaking - reset silence detection
             if (silenceDetectionTimeout) {
                 clearTimeout(silenceDetectionTimeout);
                 silenceDetectionTimeout = null;
                 stopSilenceTimer();
+                console.log('Speech detected - silence timer reset');
             }
         }
         
         // Continue monitoring
-        requestAnimationFrame(monitorAudioLevel);
+        setTimeout(monitorAudioLevel, CHECK_INTERVAL);
     }
     
     function startSilenceTimer() {
+        stopSilenceTimer();
         let silenceSeconds = 0;
         silenceTimerInterval = setInterval(() => {
             silenceSeconds++;
-            silenceTimer.textContent = `Silence: ${silenceSeconds}s`;
+            const remaining = 5 - silenceSeconds;
+            silenceTimer.textContent = remaining > 0 ? `${remaining}s` : 'Sending...';
         }, 1000);
         silenceTimer.style.display = 'block';
     }
@@ -624,7 +650,7 @@
             silenceTimerInterval = null;
         }
         silenceTimer.style.display = 'none';
-        silenceTimer.textContent = 'Silence: 0s';
+        silenceTimer.textContent = '--';
     }
     
     // Start continuous listening session
@@ -649,6 +675,10 @@
             listeningIndicator.style.display = 'flex';
             sessionTimer.style.display = 'block';
             
+            // Clear empty state
+            const emptyState = messagesDiv.querySelector('[style*="No messages"]');
+            if (emptyState) emptyState.remove();
+            
             // Start timers
             startSessionTimer();
             setupSilenceDetection(stream);
@@ -662,20 +692,50 @@
     
     // Auto-send when silence is detected
     function autoSendAudio() {
-        if (!isSessionActive || recordingChunks.length === 0) return;
+        if (!isSessionActive || recordingChunks.length === 0) {
+            silenceDetectionTimeout = null;
+            stopSilenceTimer();
+            return;
+        }
         
         const blob = new Blob(recordingChunks, { type: 'audio/wav' });
         recordingChunks = []; // Clear for next message
         
+        // Create a temporary message with pending status
+        const tempId = 'msg-' + Date.now();
+        const tempMsg = {
+            id: tempId,
+            role: 'user',
+            original_text: '(Sending audio...)',
+            status: 'pending'
+        };
+        displayMessage(tempMsg);
+        
         const reader = new FileReader();
         reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            const message = {
-                type: 'audio_message',
-                audio: base64,
-                language: sourceLangSelect.value
-            };
-            socket.send(JSON.stringify(message));
+            try {
+                const base64 = reader.result.split(',')[1];
+                const message = {
+                    type: 'audio_message',
+                    audio: base64,
+                    language: sourceLangSelect.value,
+                    temp_id: tempId
+                };
+                socket.send(JSON.stringify(message));
+                console.log('Audio message sent to server');
+                
+                // Update temp message to show processing
+                const msgEl = document.getElementById(tempId);
+                if (msgEl) {
+                    const statusEl = msgEl.querySelector('.message-status');
+                    if (statusEl) {
+                        statusEl.innerHTML = `<span class="status-badge status-transcribing">Transcribing...</span>`;
+                    }
+                }
+            } catch (e) {
+                console.error('Error sending audio:', e);
+                showError('Error sending audio message');
+            }
         };
         reader.readAsDataURL(blob);
         
@@ -775,9 +835,9 @@
     // Show error/notification
     function showError(message, type = 'error') {
         const errorEl = document.createElement('div');
-        const bgColor = type === 'success' ? '#55efc4' : '#ff6b6b';
-        const textColor = type === 'success' ? '#00b894' : '#fff';
-        errorEl.style.cssText = `padding: 10px 15px; margin: 10px 20px; background: ${bgColor}; color: ${textColor}; border-radius: 4px;`;
+        const bgColor = type === 'success' ? '#d1f0e5' : '#f8d7da';
+        const textColor = type === 'success' ? '#0f5132' : '#842029';
+        errorEl.style.cssText = `padding: 12px 14px; margin: 10px 0; background: ${bgColor}; color: ${textColor}; border-radius: 6px; font-size: 13px; font-weight: 500;`;
         errorEl.textContent = message;
         messagesDiv.appendChild(errorEl);
         setTimeout(() => errorEl.remove(), type === 'success' ? 3000 : 5000);
@@ -788,7 +848,9 @@
         fetch(`/api/chats/${chatId}/messages/`)
             .then(r => r.json())
             .then(data => {
-                data.forEach(msg => displayMessage(msg));
+                if (data.length > 0) {
+                    data.forEach(msg => displayMessage(msg));
+                }
             })
             .catch(e => console.error('Error loading messages:', e));
     }
