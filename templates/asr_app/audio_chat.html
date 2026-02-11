@@ -432,10 +432,12 @@
     let silenceDetectionTimeout = null;
     let silenceTimerInterval = null;
     let silenceStartTime = null;
+    let lastSpeechTime = null;
+    let consecutiveSilenceChecks = 0;
     
-    // Improved thresholds for better detection
-    const SILENCE_THRESHOLD = 100;  // Lower = more sensitive to silence
-    const SILENCE_DURATION = 5000;  // 5 seconds of silence to auto-send
+    // Voice Activity Detection thresholds
+    const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
+    const SILENCE_CHECKS_NEEDED = 35; // ~35 checks * 150ms = 5.25 seconds
     const CHECK_INTERVAL = 150;     // Check audio level every 150ms
     
     // DOM elements
@@ -590,7 +592,7 @@
         monitorAudioLevel();
     }
     
-    // Monitor audio level with improved detection
+    // Monitor audio level with Voice Activity Detection
     function monitorAudioLevel() {
         if (!isSessionActive || !analyser) return;
         
@@ -604,28 +606,37 @@
         }
         const rms = Math.sqrt(sum / dataArray.length);
         
-        // Detect if this is silence
-        const isSilent = rms < SILENCE_THRESHOLD;
+        // Voice Activity Detection logic
+        const isSpeech = rms > SPEECH_THRESHOLD;
         
-        console.log(`Audio Level: ${rms.toFixed(0)}, Silent: ${isSilent}, Chunks: ${recordingChunks.length}`);
+        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, SilenceCount: ${consecutiveSilenceChecks}, Chunks: ${recordingChunks.length}`);
         
-        if (isSilent) {
-            // Silence detected
-            if (!silenceDetectionTimeout) {
-                silenceStartTime = Date.now();
-                silenceDetectionTimeout = setTimeout(() => {
-                    console.log('Silence duration reached - auto-sending');
-                    autoSendAudio();
-                }, SILENCE_DURATION);
-                startSilenceTimer();
-            }
-        } else {
-            // User is speaking - reset silence detection
+        if (isSpeech) {
+            // User is speaking - reset silence counter
+            lastSpeechTime = Date.now();
+            consecutiveSilenceChecks = 0;
+            
             if (silenceDetectionTimeout) {
                 clearTimeout(silenceDetectionTimeout);
                 silenceDetectionTimeout = null;
                 stopSilenceTimer();
                 console.log('Speech detected - silence timer reset');
+            }
+        } else {
+            // Possible silence - increment counter
+            consecutiveSilenceChecks++;
+            
+            // After SILENCE_CHECKS_NEEDED consecutive silence checks (~5 seconds)
+            if (consecutiveSilenceChecks >= SILENCE_CHECKS_NEEDED) {
+                if (!silenceDetectionTimeout && recordingChunks.length > 0) {
+                    // Only auto-send if we have audio recorded
+                    console.log('Silence threshold reached - auto-sending!');
+                    autoSendAudio();
+                    consecutiveSilenceChecks = 0;
+                }
+            } else if (consecutiveSilenceChecks === 1) {
+                // Just started silence
+                startSilenceTimer();
             }
         }
         
@@ -638,7 +649,7 @@
         let silenceSeconds = 0;
         silenceTimerInterval = setInterval(() => {
             silenceSeconds++;
-            const remaining = 5 - silenceSeconds;
+            const remaining = Math.max(0, 5 - silenceSeconds);
             silenceTimer.textContent = remaining > 0 ? `${remaining}s` : 'Sending...';
         }, 1000);
         silenceTimer.style.display = 'block';
@@ -651,6 +662,7 @@
         }
         silenceTimer.style.display = 'none';
         silenceTimer.textContent = '--';
+        consecutiveSilenceChecks = 0;
     }
     
     // Start continuous listening session
