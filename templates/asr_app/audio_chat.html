@@ -434,19 +434,14 @@
     let silenceStartTime = null;
     let lastSpeechTime = null;
     let consecutiveSilenceChecks = 0;
-    let continuousSendInterval = null;
-    let speechDetectedSinceLastSend = false;
-    let currentMessageTempId = null; // Track message for continuous sends
+    let currentMessageTempId = null; // Track message for final send
     let currentMessageHasGoodText = false; // Track if message has real transcription
-    let speechChecksInWindow = 0; // Count speech checks in current 2s window
-    let totalChecksInWindow = 0; // Total checks in current 2s window
+    let userIsSpeaking = false; // Track if user is currently speaking
     
     // Voice Activity Detection thresholds
     const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
-    const CONTINUOUS_SEND_INTERVAL = 2000; // Send every 2 seconds while speaking
-    const SILENCE_CHECKS_NEEDED = 35; // ~35 checks * 150ms = 5.25 seconds
+    const SILENCE_CHECKS_NEEDED = 35; // ~35 checks * 150ms = 5.25 seconds (pause detection)
     const CHECK_INTERVAL = 150;     // Check audio level every 150ms
-    const MIN_SPEECH_RATIO = 0.4;   // Require 40% of checks to be speech in 2s window
     
     // DOM elements
     const startBtn = document.getElementById('start-btn');
@@ -635,40 +630,27 @@
         // Voice Activity Detection logic
         const isSpeech = rms > SPEECH_THRESHOLD;
         
-        // Track speech ratio in 2-second window
-        totalChecksInWindow++;
-        if (isSpeech) {
-            speechChecksInWindow++;
-        }
-        const speechRatio = speechChecksInWindow / totalChecksInWindow;
-        
-        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, Chunks: ${recordingChunks.length}, SpeechRatio: ${speechRatio.toFixed(2)}`);
+        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, Chunks: ${recordingChunks.length}`);
         
         if (isSpeech) {
-            // User is speaking
+            // User is speaking - just accumulate chunks
             lastSpeechTime = Date.now();
             consecutiveSilenceChecks = 0;
-            speechDetectedSinceLastSend = true; // Mark that we have speech
             
-            // Start continuous sending timer when speech begins
-            if (!continuousSendInterval) {
-                console.log('Speech detected - starting continuous send every 2s');
-                continuousSendInterval = setInterval(() => {
-                    // Only send if we have sufficient speech in this window (>40% speech)
-                    const hasSufficientSpeech = speechChecksInWindow / Math.max(1, totalChecksInWindow) >= MIN_SPEECH_RATIO;
-                    if (isSessionActive && recordingChunks.length > 0 && hasSufficientSpeech) {
-                        console.log(`⏱️ Continuous send triggered (${(speechChecksInWindow / Math.max(1, totalChecksInWindow) * 100).toFixed(0)}% speech)`);
-                        autoSendAudio(true); // true = continue listening after send
-                        // Reset counters for next window
-                        speechChecksInWindow = 0;
-                        totalChecksInWindow = 0;
-                    } else if (!hasSufficientSpeech) {
-                        console.log(`⏭️ Skipping send - insufficient speech (${(speechChecksInWindow / Math.max(1, totalChecksInWindow) * 100).toFixed(0)}%)`);
-                        recordingChunks = []; // Clear silence chunks
-                        speechChecksInWindow = 0;
-                        totalChecksInWindow = 0;
-                    }
-                }, CONTINUOUS_SEND_INTERVAL);
+            // Create message on first speech detection
+            if (!userIsSpeaking) {
+                userIsSpeaking = true;
+                if (!currentMessageTempId) {
+                    currentMessageTempId = 'msg-' + Date.now();
+                    console.log(`🎤 Speech started - creating message: ${currentMessageTempId}`);
+                    const tempMsg = {
+                        id: currentMessageTempId,
+                        role: 'user',
+                        original_text: '🎤 Listening...',
+                        status: 'transcribing'
+                    };
+                    displayMessage(tempMsg);
+                }
             }
             
             if (silenceDetectionTimeout) {
@@ -680,18 +662,13 @@
             // Possible silence - increment counter
             consecutiveSilenceChecks++;
             
-            // After silence period, send remaining audio and stop continuous send
-            if (consecutiveSilenceChecks >= SILENCE_CHECKS_NEEDED) {
+            // After silence period, send all accumulated chunks as one message
+            if (consecutiveSilenceChecks >= SILENCE_CHECKS_NEEDED && userIsSpeaking) {
                 if (recordingChunks.length > 0) {
-                    console.log('Silence reached - sending final chunks');
-                    autoSendAudio(false); // false = end of this message
+                    console.log(`⏸️ Pause detected (5s) - sending ${recordingChunks.length} chunks as final message`);
+                    autoSendAudio(false); // false = final send
                 }
-                
-                if (continuousSendInterval) {
-                    clearInterval(continuousSendInterval);
-                    continuousSendInterval = null;
-                    console.log('Stopped continuous send');
-                }
+                userIsSpeaking = false;
                 currentMessageTempId = null; // Reset for next message
                 currentMessageHasGoodText = false; // Reset flag for next message
                 speechChecksInWindow = 0; // Reset window counters
@@ -789,48 +766,13 @@
             return;
         }
         
-        // Skip continuous sends if no speech was detected in this batch
-        if (isContinuous && !speechDetectedSinceLastSend) {
-            console.log('⚠️ No speech detected in this chunk, skipping send');
-            recordingChunks = []; // Clear silence/noise chunks
-            return;
-        }
-        
-        console.log(`${isContinuous ? '⏱️ Continuous' : '⏸️ Final'} send - ${recordingChunks.length} chunks`);
+        console.log(`⏸️ Final send - ${recordingChunks.length} chunks`);
         const blob = new Blob(recordingChunks, { type: 'audio/wav' });
         recordingChunks = []; // Clear for next batch
         consecutiveSilenceChecks = 0; // Reset for next pause detection
         
-        // Handle message ID tracking
-        let tempId = null;
-        if (isContinuous) {
-            // Continuous send - create message on first send
-            if (!currentMessageTempId) {
-                currentMessageTempId = 'msg-' + Date.now();
-                const tempMsg = {
-                    id: currentMessageTempId,
-                    role: 'user',
-                    original_text: '(Transcribing...)',
-                    status: 'transcribing'
-                };
-                displayMessage(tempMsg);
-            }
-            tempId = currentMessageTempId;
-        } else {
-            // Final send - create new message (or use existing if already created by continuous)
-            if (!currentMessageTempId) {
-                tempId = 'msg-' + Date.now();
-                const tempMsg = {
-                    id: tempId,
-                    role: 'user',
-                    original_text: '(Sending audio...)',
-                    status: 'pending'
-                };
-                displayMessage(tempMsg);
-            } else {
-                tempId = currentMessageTempId;
-            }
-        }
+        // Use existing message ID (created when speech started)
+        const tempId = currentMessageTempId;
         
         const reader = new FileReader();
         reader.onload = () => {
@@ -841,13 +783,13 @@
                     audio: base64,
                     language: sourceLangSelect.value,
                     temp_id: tempId,
-                    is_continuous: isContinuous // Server can group continuous chunks
+                    is_continuous: false // Always final send now
                 };
                 socket.send(JSON.stringify(message));
-                console.log(`✅ Audio sent - temp_id: ${tempId}`);
+                console.log(`✅ Audio sent - temp_id: ${tempId}, ${recordingChunks.length} chunks combined`);
                 
-                // Update message status for continuous send
-                if (isContinuous && tempId) {
+                // Update message status
+                if (tempId) {
                     const msgEl = document.getElementById(tempId);
                     if (msgEl) {
                         const statusEl = msgEl.querySelector('.message-status');
@@ -863,17 +805,13 @@
         };
         reader.readAsDataURL(blob);
         
-        // For final send only - finalize message and reset for next one
-        if (!isContinuous) {
-            silenceDetectionTimeout = null;
-            stopSilenceTimer();
-            // Reset message tracking for next speech burst
-            currentMessageTempId = null;
-            currentMessageHasGoodText = false;
-            speechChecksInWindow = 0;
-            totalChecksInWindow = 0;
-            console.log('✅ Message finalized - ready for next speech burst');
-        }
+        // Finalize message and reset for next one
+        silenceDetectionTimeout = null;
+        stopSilenceTimer();
+        // Reset message tracking for next speech burst
+        currentMessageTempId = null;
+        currentMessageHasGoodText = false;
+        console.log('✅ Message finalized - ready for next speech burst');
     }
     
     // Stop entire session
@@ -881,12 +819,6 @@
         if (!isSessionActive) return;
         
         isSessionActive = false;
-        
-        // Stop continuous sending
-        if (continuousSendInterval) {
-            clearInterval(continuousSendInterval);
-            continuousSendInterval = null;
-        }
         
         // Send any remaining audio
         if (recordingChunks.length > 0) {
