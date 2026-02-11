@@ -749,14 +749,17 @@
 {% block extra_js %}
 <script>
     // Load VAD script dynamically with proper error handling
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-js@0.0.13/dist/index.min.js';
-    script.async = true;
-    document.head.appendChild(script);
+    const vadScript = document.createElement('script');
+    vadScript.src = 'https://cdn.jsdelivr.net/gh/ricky0123/vad-js@main/dist/index.min.js';
+    vadScript.async = true;
+    vadScript.onerror = () => {
+        console.error('❌ Failed to load VAD from CDN');
+    };
+    document.head.appendChild(vadScript);
 </script>
 
 <script>
-    const chatId = '{{ chat.id }}';
+    const chatId = '{{ chat_id }}';
     
     // Check if chatId is empty
     if (!chatId || chatId.includes('{')) {
@@ -1346,16 +1349,33 @@
     
     // Load existing messages
     function loadMessages() {
-        fetch(`/api/chats/${chatId}/messages/`)
-            .then(r => r.json())
+        if (!chatId) {
+            console.log('⚠️ chatId not available yet, skipping message load');
+            return;
+        }
+        
+        const messagesUrl = `/api/chats/${chatId}/messages/`;
+        console.log('📨 Loading messages from:', messagesUrl);
+        
+        fetch(messagesUrl)
+            .then(r => {
+                if (!r.ok) {
+                    console.warn(`Messages API returned ${r.status}:`, r.statusText);
+                    return [];
+                }
+                return r.json();
+            })
             .then(data => {
-                if (data.length > 0) {
+                if (data && data.length > 0) {
                     data.forEach(msg => displayMessage(msg));
                 }
             })
             .catch(e => console.error('Error loading messages:', e));
     }
     
-    loadMessages();
+    // Load messages once DOM is ready and chatId is confirmed
+    if (chatId && !chatId.includes('{')) {
+        loadMessages();
+    }
 </script>
 {% endblock %}
