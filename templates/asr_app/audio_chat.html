@@ -747,11 +747,28 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-js@0.0.13/dist/index.min.js"></script>
+<script>
+    // Load VAD script dynamically with proper error handling
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-js@0.0.13/dist/index.min.js';
+    script.async = true;
+    document.head.appendChild(script);
+</script>
+
 <script>
     const chatId = '{{ chat.id }}';
+    
+    // Check if chatId is empty
+    if (!chatId || chatId.includes('{')) {
+        console.error('❌ Chat ID not loaded from Django template');
+        alert('Chat ID missing - page will not work. Please refresh.');
+    }
+    
     const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(`${ws_scheme}://${window.location.host}/ws/chat/${chatId}/`);
+    const socketUrl = `${ws_scheme}://${window.location.host}/ws/audio-chat/${chatId}/`;
+    console.log('🔌 Attempting WebSocket connection:', socketUrl);
+    
+    const socket = new WebSocket(socketUrl);
     
     // UI Elements
     const messagesArea = document.getElementById('messagesArea');
@@ -791,18 +808,22 @@
     
     // WebSocket handlers
     socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('✅ WebSocket connected:', socketUrl);
         showNotification('🟢 Connected', 'success');
     };
     
     socket.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('❌ WebSocket disconnected');
         showNotification('🔴 Disconnected - Please refresh', 'error');
     };
     
     socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        showNotification('Connection error occurred', 'error');
+        console.error('❌ WebSocket error - Bad response from server:', error);
+        console.error('Check:');
+        console.error('1. Is chatId correct?', chatId);
+        console.error('2. Is WebSocket consumer configured in urls.py?');
+        console.error('3. Is Django Channels running?');
+        showNotification('Connection failed - check console', 'error');
     };
     
     socket.onmessage = (e) => {
@@ -942,12 +963,25 @@
         }
     }
     
-    // FIXED: Setup silence detection with WebRTC VAD
+    // FIXED: Setup silence detection with WebRTC VAD (with script loading wait)
     async function setupSilenceDetection(stream) {
+        // Wait for VAD script to load
+        let retries = 0;
+        while (!window.VAD && retries < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+        }
+        
+        if (!window.VAD) {
+            console.error('❌ VAD library failed to load from CDN');
+            console.log('Falling back to RMS-based detection');
+            setupRMSDetection(stream);
+            return;
+        }
+        
         try {
             // Initialize WebRTC VAD
-            const VAD = window.VAD;
-            const myvad = await VAD.MicVAD.new({
+            const myvad = await window.VAD.MicVAD.new({
                 onSpeechStart: () => {
                     consecutiveSilenceChecks = 0;
                     
