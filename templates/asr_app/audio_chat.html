@@ -9,25 +9,26 @@
         display: flex;
         flex-direction: column;
         height: calc(100vh - 80px);
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #f8f9fa;
     }
     
     .chat-header {
         padding: 20px;
-        background: rgba(255, 255, 255, 0.95);
-        border-bottom: 1px solid #e0e0e0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: white;
+        border-bottom: 2px solid #667eea;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     
     .chat-header h1 {
-        margin: 0 0 10px 0;
-        font-size: 24px;
-        color: #333;
+        margin: 0 0 15px 0;
+        font-size: 28px;
+        color: #1a1a1a;
+        font-weight: 700;
     }
     
     .chat-settings {
         display: flex;
-        gap: 15px;
+        gap: 20px;
         align-items: center;
         flex-wrap: wrap;
     }
@@ -41,17 +42,25 @@
     .setting-group label {
         margin: 0;
         font-size: 14px;
-        color: #666;
-        font-weight: 500;
+        color: #444;
+        font-weight: 600;
     }
     
     .setting-group select {
-        padding: 6px 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        padding: 8px 12px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
         font-size: 14px;
         background: white;
         cursor: pointer;
+        color: #333;
+        font-weight: 500;
+    }
+    
+    .setting-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
     
     .chat-messages {
@@ -60,7 +69,8 @@
         padding: 20px;
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 12px;
+        background: #f8f9fa;
     }
     
     .message {
@@ -90,10 +100,10 @@
     
     .message-content {
         max-width: 70%;
-        padding: 12px 15px;
-        border-radius: 12px;
+        padding: 14px 16px;
+        border-radius: 14px;
         background: white;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
     
     .message.user .message-content {
@@ -103,8 +113,13 @@
     
     .message-text {
         margin: 0 0 8px 0;
-        font-size: 14px;
+        font-size: 15px;
         line-height: 1.5;
+        color: #222;
+    }
+    
+    .message.user .message-text {
+        color: white;
     }
     
     .message-audio {
@@ -114,11 +129,23 @@
     .message-audio audio {
         max-width: 100%;
         border-radius: 6px;
+        height: 32px;
+    }
+    
+    .message-audio-original,
+    .message-audio-translated {
+        font-size: 12px;
+        color: #555;
+        margin-bottom: 8px;
+    }
+    
+    .message.user .message-audio-original,
+    .message.user .message-audio-translated {
+        color: rgba(255, 255, 255, 0.9);
     }
     
     .message-status {
         font-size: 12px;
-        opacity: 0.7;
         margin-top: 6px;
     }
     
@@ -128,101 +155,114 @@
     
     .status-badge {
         display: inline-block;
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: 12px;
         font-size: 11px;
-        font-weight: 500;
+        font-weight: 600;
         text-transform: uppercase;
+        letter-spacing: 0.3px;
     }
     
     .status-pending {
-        background: #ffeaa7;
-        color: #d63031;
+        background: #fff3cd;
+        color: #856404;
     }
     
     .status-transcribing {
-        background: #74b9ff;
-        color: #0984e3;
+        background: #cfe2ff;
+        color: #084298;
     }
     
     .status-translating {
-        background: #a29bfe;
-        color: #6c5ce7;
+        background: #e2d5f5;
+        color: #5d2e8c;
     }
     
     .status-completed {
-        background: #55efc4;
-        color: #00b894;
+        background: #d1f0e5;
+        color: #0f5132;
     }
     
     .status-failed {
-        background: #ff7675;
-        color: #d63031;
+        background: #f8d7da;
+        color: #842029;
     }
     
     .chat-input-area {
-        padding: 20px;
-        background: rgba(255, 255, 255, 0.95);
-        border-top: 1px solid #e0e0e0;
-        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+        padding: 16px 20px;
+        background: white;
+        border-top: 2px solid #e0e0e0;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
     }
     
     .input-controls {
         display: flex;
-        gap: 10px;
+        gap: 12px;
         align-items: center;
     }
     
     .record-button {
-        width: 50px;
-        height: 50px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
         border: none;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        font-size: 20px;
+        font-size: 24px;
         cursor: pointer;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        flex-shrink: 0;
     }
     
     .record-button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        transform: scale(1.08);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
     }
     
-    .record-button.recording {
-        background: #ff6b6b;
-        animation: pulse 1.5s ease-in-out infinite;
+    .record-button:active {
+        transform: scale(0.96);
     }
     
     @keyframes pulse {
         0%, 100% {
-            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
         }
         50% {
-            box-shadow: 0 4px 25px rgba(255, 107, 107, 0.8);
+            box-shadow: 0 4px 24px rgba(255, 107, 107, 0.7);
         }
     }
     
     .recording-timer {
-        font-size: 14px;
-        font-weight: 600;
-        color: #ff6b6b;
-        min-width: 60px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #667eea;
+        min-width: 70px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+    
+    .recording-timer#silence-timer {
+        color: #ff9800;
     }
     
     .input-text {
         flex: 1;
-        padding: 12px 15px;
-        border: 2px solid #e0e0e0;
-        border-radius: 25px;
+        padding: 12px 16px;
+        border: 2px solid #ddd;
+        border-radius: 24px;
         font-size: 14px;
         font-family: inherit;
         transition: all 0.3s ease;
+        color: #333;
+    }
+    
+    .input-text::placeholder {
+        color: #999;
     }
     
     .input-text:focus {
@@ -232,19 +272,26 @@
     }
     
     .send-button {
-        padding: 10px 20px;
+        padding: 10px 22px;
         border: none;
-        border-radius: 25px;
+        border-radius: 24px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         cursor: pointer;
         font-weight: 600;
+        font-size: 14px;
         transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        flex-shrink: 0;
     }
     
     .send-button:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .send-button:active {
+        transform: translateY(0);
     }
     
     .send-button:disabled {
@@ -255,51 +302,29 @@
     .audio-waveform {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 3px;
-        height: 30px;
-        padding: 5px;
-        background: rgba(0, 0, 0, 0.05);
-        border-radius: 6px;
+        height: 24px;
     }
     
     .waveform-bar {
-        width: 3px;
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-        border-radius: 2px;
+        width: 2px;
+        background: #667eea;
+        border-radius: 1px;
         animation: wave 0.6s ease-in-out infinite;
     }
     
+    .waveform-bar:nth-child(1) { animation-delay: 0s; }
+    .waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+    .waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+    
     @keyframes wave {
-        0%, 100% { height: 5px; }
-        50% { height: 20px; }
+        0%, 100% { height: 4px; }
+        50% { height: 16px; }
     }
     
-    .loading-indicator {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        margin: 10px 0;
-    }
-    
-    .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #667eea;
-        animation: bounce 1.4s infinite;
-    }
-    
-    .dot:nth-child(2) {
-        animation-delay: 0.2s;
-    }
-    
-    .dot:nth-child(3) {
-        animation-delay: 0.4s;
-    }
-    
-    @keyframes bounce {
-        0%, 100% { transform: translateY(0); opacity: 0.7; }
-        50% { transform: translateY(-10px); opacity: 1; }
+    #listening-indicator {
+        gap: 8px;
     }
     
     @media (max-width: 768px) {
@@ -308,11 +333,18 @@
         }
         
         .chat-settings {
-            gap: 10px;
+            gap: 12px;
         }
         
         .setting-group {
-            gap: 5px;
+            gap: 6px;
+            font-size: 13px;
+        }
+        
+        .record-button {
+            width: 48px;
+            height: 48px;
+            font-size: 20px;
         }
     }
 </style>
@@ -354,12 +386,25 @@
     <!-- Input Area -->
     <div class="chat-input-area">
         <div class="input-controls">
-            <button class="record-button" id="record-btn" title="Record audio">
-                <span id="record-icon">🎙️</span>
+            <button class="record-button" id="start-btn" title="Start conversation">
+                <span id="start-icon">🎙️</span>
+                <span style="font-size: 12px; margin-top: 4px;">Start</span>
             </button>
-            <span class="recording-timer" id="timer" style="display: none;">0:00</span>
-            <input type="text" class="input-text" id="text-input" placeholder="Type a message or record audio..." />
-            <button class="send-button" id="send-btn">Send</button>
+            <span class="recording-timer" id="session-timer" style="display: none;">0:00</span>
+            <span class="recording-timer" id="silence-timer" style="display: none; color: #ff9800; margin-left: -5px;">Silence: 0s</span>
+            <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
+                <div id="listening-indicator" style="display: none; display: flex; gap: 3px; align-items: center;">
+                    <span style="font-size: 12px; color: #667eea; font-weight: 600;">Listening...</span>
+                    <div class="audio-waveform">
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                        <div class="waveform-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <button class="send-button" id="stop-btn" style="display: none;" title="Stop conversation">Stop</button>
+            <input type="text" class="input-text" id="text-input" placeholder="Or type a message..." style="display: none;" />
+            <button class="send-button" id="send-text-btn" style="display: none;" title="Send text message">Send</button>
         </div>
     </div>
 </div>
@@ -370,18 +415,27 @@
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${protocol}//${window.location.host}/ws/audio-chat/${chatId}/`);
     
-    // Audio recording
+    // Audio recording - Siri-like continuous mode
     let mediaRecorder = null;
+    let audioContext = null;
+    let analyser = null;
+    let isSessionActive = false;
     let recordingChunks = [];
-    let recordingStartTime = null;
-    let timerInterval = null;
+    let sessionStartTime = null;
+    let sessionTimerInterval = null;
+    let silenceDetectionTimeout = null;
+    let silenceTimerInterval = null;
+    const SILENCE_THRESHOLD = 50; // Audio level threshold
+    const SILENCE_DURATION = 5000; // 5 seconds of silence to auto-send
     
     // DOM elements
-    const recordBtn = document.getElementById('record-btn');
-    const recordIcon = document.getElementById('record-icon');
-    const timer = document.getElementById('timer');
-    const sendBtn = document.getElementById('send-btn');
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const sessionTimer = document.getElementById('session-timer');
+    const silenceTimer = document.getElementById('silence-timer');
+    const listeningIndicator = document.getElementById('listening-indicator');
     const textInput = document.getElementById('text-input');
+    const sendTextBtn = document.getElementById('send-text-btn');
     const messagesDiv = document.getElementById('messages');
     const sourceLangSelect = document.getElementById('source-lang');
     const targetLangSelect = document.getElementById('target-lang');
@@ -512,67 +566,107 @@
         }
     }
     
-    // Record audio
-    recordBtn.addEventListener('click', async () => {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            stopRecording();
-        } else {
-            startRecording();
+    // Detect audio level for silence detection
+    function setupSilenceDetection(stream) {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
-    });
+        
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        
+        monitorAudioLevel();
+    }
     
-    async function startRecording() {
+    // Monitor audio level and detect silence
+    function monitorAudioLevel() {
+        if (!isSessionActive || !analyser) return;
+        
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(dataArray);
+        
+        // Calculate average level
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        
+        if (average < SILENCE_THRESHOLD) {
+            // Silence detected
+            if (!silenceDetectionTimeout) {
+                silenceDetectionTimeout = setTimeout(autoSendAudio, SILENCE_DURATION);
+                startSilenceTimer();
+            }
+        } else {
+            // User is speaking
+            if (silenceDetectionTimeout) {
+                clearTimeout(silenceDetectionTimeout);
+                silenceDetectionTimeout = null;
+                stopSilenceTimer();
+            }
+        }
+        
+        // Continue monitoring
+        requestAnimationFrame(monitorAudioLevel);
+    }
+    
+    function startSilenceTimer() {
+        let silenceSeconds = 0;
+        silenceTimerInterval = setInterval(() => {
+            silenceSeconds++;
+            silenceTimer.textContent = `Silence: ${silenceSeconds}s`;
+        }, 1000);
+        silenceTimer.style.display = 'block';
+    }
+    
+    function stopSilenceTimer() {
+        if (silenceTimerInterval) {
+            clearInterval(silenceTimerInterval);
+            silenceTimerInterval = null;
+        }
+        silenceTimer.style.display = 'none';
+        silenceTimer.textContent = 'Silence: 0s';
+    }
+    
+    // Start continuous listening session
+    startBtn.addEventListener('click', async () => {
+        if (isSessionActive) return;
+        
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             recordingChunks = [];
-            recordingStartTime = Date.now();
+            sessionStartTime = Date.now();
+            isSessionActive = true;
             
             mediaRecorder.ondataavailable = (e) => recordingChunks.push(e.data);
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordingChunks, { type: 'audio/wav' });
-                sendAudio(blob);
-            };
-            
             mediaRecorder.start();
-            recordBtn.classList.add('recording');
-            recordIcon.textContent = '⏹️';
-            startTimer();
+            
+            // Setup UI
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'block';
+            textInput.style.display = 'block';
+            sendTextBtn.style.display = 'block';
+            listeningIndicator.style.display = 'flex';
+            sessionTimer.style.display = 'block';
+            
+            // Start timers
+            startSessionTimer();
+            setupSilenceDetection(stream);
+            
+            showError('🎤 Session started - Speak naturally!', 'success');
         } catch (err) {
             console.error('Recording error:', err);
             showError('Unable to access microphone. Please check permissions.');
         }
-    }
+    });
     
-    function stopRecording() {
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            recordBtn.classList.remove('recording');
-            recordIcon.textContent = '🎙️';
-            stopTimer();
-        }
-    }
-    
-    function startTimer() {
-        let seconds = 0;
-        timerInterval = setInterval(() => {
-            seconds++;
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            timer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-            timer.style.display = 'block';
-        }, 1000);
-    }
-    
-    function stopTimer() {
-        clearInterval(timerInterval);
-        timer.style.display = 'none';
-        timer.textContent = '0:00';
-    }
-    
-    // Send audio
-    function sendAudio(blob) {
+    // Auto-send when silence is detected
+    function autoSendAudio() {
+        if (!isSessionActive || recordingChunks.length === 0) return;
+        
+        const blob = new Blob(recordingChunks, { type: 'audio/wav' });
+        recordingChunks = []; // Clear for next message
+        
         const reader = new FileReader();
         reader.onload = () => {
             const base64 = reader.result.split(',')[1];
@@ -584,10 +678,69 @@
             socket.send(JSON.stringify(message));
         };
         reader.readAsDataURL(blob);
+        
+        // Reset silence detection
+        silenceDetectionTimeout = null;
+        stopSilenceTimer();
+    }
+    
+    // Stop entire session
+    stopBtn.addEventListener('click', () => {
+        if (!isSessionActive) return;
+        
+        isSessionActive = false;
+        
+        // Send any remaining audio
+        if (recordingChunks.length > 0) {
+            autoSendAudio();
+        }
+        
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Cleanup
+        if (silenceDetectionTimeout) {
+            clearTimeout(silenceDetectionTimeout);
+            silenceDetectionTimeout = null;
+        }
+        stopSilenceTimer();
+        stopSessionTimer();
+        
+        // Reset UI
+        startBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+        textInput.style.display = 'none';
+        sendTextBtn.style.display = 'none';
+        listeningIndicator.style.display = 'none';
+        sessionTimer.style.display = 'none';
+        
+        showError('✅ Session ended', 'success');
+    });
+    
+    // Session timer
+    function startSessionTimer() {
+        let seconds = 0;
+        sessionTimerInterval = setInterval(() => {
+            seconds++;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            sessionTimer.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+        }, 1000);
+    }
+    
+    function stopSessionTimer() {
+        if (sessionTimerInterval) {
+            clearInterval(sessionTimerInterval);
+            sessionTimerInterval = null;
+        }
+        sessionTimer.style.display = 'none';
+        sessionTimer.textContent = '0:00';
     }
     
     // Send text message
-    sendBtn.addEventListener('click', () => {
+    sendTextBtn.addEventListener('click', () => {
         const text = textInput.value.trim();
         if (text) {
             const message = {
@@ -603,7 +756,7 @@
     textInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendBtn.click();
+            sendTextBtn.click();
         }
     });
     
@@ -619,13 +772,15 @@
         });
     });
     
-    // Show error
-    function showError(message) {
+    // Show error/notification
+    function showError(message, type = 'error') {
         const errorEl = document.createElement('div');
-        errorEl.style.cssText = 'padding: 10px 15px; margin: 10px 20px; background: #ff6b6b; color: white; border-radius: 4px;';
+        const bgColor = type === 'success' ? '#55efc4' : '#ff6b6b';
+        const textColor = type === 'success' ? '#00b894' : '#fff';
+        errorEl.style.cssText = `padding: 10px 15px; margin: 10px 20px; background: ${bgColor}; color: ${textColor}; border-radius: 4px;`;
         errorEl.textContent = message;
         messagesDiv.appendChild(errorEl);
-        setTimeout(() => errorEl.remove(), 5000);
+        setTimeout(() => errorEl.remove(), type === 'success' ? 3000 : 5000);
     }
     
     // Load existing messages
