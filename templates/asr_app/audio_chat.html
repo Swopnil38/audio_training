@@ -435,6 +435,7 @@
     let lastSpeechTime = null;
     let consecutiveSilenceChecks = 0;
     let continuousSendInterval = null;
+    let speechDetectedSinceLastSend = false;
     
     // Voice Activity Detection thresholds
     const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
@@ -617,14 +618,16 @@
             // User is speaking
             lastSpeechTime = Date.now();
             consecutiveSilenceChecks = 0;
+            speechDetectedSinceLastSend = true; // Mark that we have speech
             
             // Start continuous sending timer when speech begins
             if (!continuousSendInterval) {
                 console.log('Speech detected - starting continuous send every 2s');
                 continuousSendInterval = setInterval(() => {
-                    if (isSessionActive && recordingChunks.length > 0) {
+                    if (isSessionActive && recordingChunks.length > 0 && speechDetectedSinceLastSend) {
                         console.log('⏱️ Continuous send triggered');
                         autoSendAudio(true); // true = continue listening after send
+                        speechDetectedSinceLastSend = false; // Reset for next batch
                     }
                 }, CONTINUOUS_SEND_INTERVAL);
             }
@@ -694,6 +697,7 @@
             isSessionActive = true;
             consecutiveSilenceChecks = 0;
             lastSpeechTime = Date.now();
+            speechDetectedSinceLastSend = false;
             
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -735,6 +739,13 @@
             console.log('No audio chunks to send, skipping auto-send');
             silenceDetectionTimeout = null;
             stopSilenceTimer();
+            return;
+        }
+        
+        // Skip continuous sends if no speech was detected in this batch
+        if (isContinuous && !speechDetectedSinceLastSend) {
+            console.log('⚠️ No speech detected in this chunk, skipping send');
+            recordingChunks = []; // Clear silence/noise chunks
             return;
         }
         
