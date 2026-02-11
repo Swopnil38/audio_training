@@ -438,12 +438,15 @@
     let speechDetectedSinceLastSend = false;
     let currentMessageTempId = null; // Track message for continuous sends
     let currentMessageHasGoodText = false; // Track if message has real transcription
+    let speechChecksInWindow = 0; // Count speech checks in current 2s window
+    let totalChecksInWindow = 0; // Total checks in current 2s window
     
     // Voice Activity Detection thresholds
     const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
     const CONTINUOUS_SEND_INTERVAL = 2000; // Send every 2 seconds while speaking
     const SILENCE_CHECKS_NEEDED = 35; // ~35 checks * 150ms = 5.25 seconds
     const CHECK_INTERVAL = 150;     // Check audio level every 150ms
+    const MIN_SPEECH_RATIO = 0.4;   // Require 40% of checks to be speech in 2s window
     
     // DOM elements
     const startBtn = document.getElementById('start-btn');
@@ -632,7 +635,14 @@
         // Voice Activity Detection logic
         const isSpeech = rms > SPEECH_THRESHOLD;
         
-        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, Chunks: ${recordingChunks.length}`);
+        // Track speech ratio in 2-second window
+        totalChecksInWindow++;
+        if (isSpeech) {
+            speechChecksInWindow++;
+        }
+        const speechRatio = speechChecksInWindow / totalChecksInWindow;
+        
+        console.log(`Audio Level: ${rms.toFixed(0)}, Speech: ${isSpeech}, Chunks: ${recordingChunks.length}, SpeechRatio: ${speechRatio.toFixed(2)}`);
         
         if (isSpeech) {
             // User is speaking
@@ -644,10 +654,19 @@
             if (!continuousSendInterval) {
                 console.log('Speech detected - starting continuous send every 2s');
                 continuousSendInterval = setInterval(() => {
-                    if (isSessionActive && recordingChunks.length > 0 && speechDetectedSinceLastSend) {
-                        console.log('⏱️ Continuous send triggered');
+                    // Only send if we have sufficient speech in this window (>40% speech)
+                    const hasSufficientSpeech = speechChecksInWindow / Math.max(1, totalChecksInWindow) >= MIN_SPEECH_RATIO;
+                    if (isSessionActive && recordingChunks.length > 0 && hasSufficientSpeech) {
+                        console.log(`⏱️ Continuous send triggered (${(speechChecksInWindow / Math.max(1, totalChecksInWindow) * 100).toFixed(0)}% speech)`);
                         autoSendAudio(true); // true = continue listening after send
-                        speechDetectedSinceLastSend = false; // Reset for next batch
+                        // Reset counters for next window
+                        speechChecksInWindow = 0;
+                        totalChecksInWindow = 0;
+                    } else if (!hasSufficientSpeech) {
+                        console.log(`⏭️ Skipping send - insufficient speech (${(speechChecksInWindow / Math.max(1, totalChecksInWindow) * 100).toFixed(0)}%)`);
+                        recordingChunks = []; // Clear silence chunks
+                        speechChecksInWindow = 0;
+                        totalChecksInWindow = 0;
                     }
                 }, CONTINUOUS_SEND_INTERVAL);
             }
@@ -675,6 +694,8 @@
                 }
                 currentMessageTempId = null; // Reset for next message
                 currentMessageHasGoodText = false; // Reset flag for next message
+                speechChecksInWindow = 0; // Reset window counters
+                totalChecksInWindow = 0;
                 consecutiveSilenceChecks = 0;
             } else if (consecutiveSilenceChecks === 1) {
                 // Just started silence
@@ -722,6 +743,8 @@
             speechDetectedSinceLastSend = false;
             currentMessageTempId = null;
             currentMessageHasGoodText = false;
+            speechChecksInWindow = 0;
+            totalChecksInWindow = 0;
             
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {

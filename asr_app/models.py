@@ -326,6 +326,14 @@ class AudioChatMessage(models.Model):
         default=Status.PENDING
     )
     
+    # Frontend tracking
+    temp_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text='Temporary ID from frontend for message tracking'
+    )
+    
     # Audio
     audio_file = models.FileField(
         upload_to='audio_chat/%Y/%m/%d/',

@@ -20,6 +20,9 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         self.user = self.scope['user']
         self.chat_group_name = f'audio_chat_{self.chat_id}'
         
+        # Track continuous audio chunks by temp_id
+        self.audio_buffer = {}  # {temp_id: [chunk1, chunk2, ...]}
+        
         # Join the chat group
         await self.channel_layer.group_add(
             self.chat_group_name,
@@ -68,15 +71,50 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             # Extract audio data
             audio_base64 = data.get('audio')
             language = data.get('language', 'mixed')
+            temp_id = data.get('temp_id')
+            is_continuous = data.get('is_continuous', False)
             
             if not audio_base64:
                 await self.send_error("No audio data provided")
                 return
             
-            # Create message record
+            # Accumulate chunks if continuous send
+            if is_continuous and temp_id:
+                if temp_id not in self.audio_buffer:
+                    self.audio_buffer[temp_id] = []
+                    logger.info(f"Starting new continuous message group: {temp_id}")
+                
+                self.audio_buffer[temp_id].append(audio_base64)
+                logger.info(f"Buffered chunk for {temp_id}, total chunks: {len(self.audio_buffer[temp_id])}")
+                
+                # Send progress update to client
+                await self.channel_layer.group_send(
+                    self.chat_group_name,
+                    {
+                        'type': 'chat_update',
+                        'message_id': temp_id,
+                        'status': 'transcribing',
+                        'original_text': f'(Listening... {len(self.audio_buffer[temp_id])} chunks)',
+                    }
+                )
+                return
+            
+            # Final send - combine all buffered chunks + this final chunk
+            if temp_id and temp_id in self.audio_buffer:
+                # Combine all chunks
+                self.audio_buffer[temp_id].append(audio_base64)
+                combined_audio = self.combine_audio_chunks(self.audio_buffer[temp_id])
+                logger.info(f"Final send for {temp_id}, combined {len(self.audio_buffer[temp_id])} chunks")
+                del self.audio_buffer[temp_id]
+            else:
+                # No buffering, use as-is (single send without continuous mode)
+                combined_audio = audio_base64
+            
+            # Create message record with combined audio
             message = await self.create_message(
-                audio_base64=audio_base64,
-                language=language
+                audio_base64=combined_audio,
+                language=language,
+                temp_id=temp_id
             )
             
             # Send notification to group
@@ -85,8 +123,9 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'chat_message',
                     'message_id': str(message.id),
+                    'temp_id': temp_id,
                     'role': 'user',
-                    'status': 'pending',
+                    'status': 'transcribing',
                     'timestamp': message.created_at.isoformat()
                 }
             )
@@ -145,6 +184,30 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     
     # Database operations
     
+    def combine_audio_chunks(self, audio_chunks):
+        """Combine multiple base64 audio chunks into one"""
+        import base64
+        
+        if not audio_chunks:
+            return ""
+        
+        if len(audio_chunks) == 1:
+            return audio_chunks[0]
+        
+        # Decode all chunks
+        decoded = [base64.b64decode(chunk) for chunk in audio_chunks]
+        
+        # For WAV files, skip header (44 bytes) for chunks after the first
+        combined = decoded[0]
+        for chunk in decoded[1:]:
+            if len(chunk) > 44:
+                combined += chunk[44:]  # Skip WAV header
+            else:
+                combined += chunk
+        
+        # Re-encode as base64
+        return base64.b64encode(combined).decode('utf-8')
+    
     @database_sync_to_async
     def user_has_access(self):
         """Check if user has access to this chat"""
@@ -156,7 +219,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             return False
     
     @database_sync_to_async
-    def create_message(self, audio_base64, language):
+    def create_message(self, audio_base64, language, temp_id=None):
         """Create audio chat message"""
         import base64
         from django.core.files.base import ContentFile
@@ -171,8 +234,9 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         message = AudioChatMessage.objects.create(
             chat=chat,
             role='user',
-            status='pending',
-            audio_file=audio_file
+            status='transcribing',
+            audio_file=audio_file,
+            temp_id=temp_id  # Store temp_id to link with frontend
         )
         
         return message
