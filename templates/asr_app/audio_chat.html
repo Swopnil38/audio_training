@@ -747,6 +747,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-js@0.0.13/dist/index.min.js"></script>
 <script>
     const chatId = '{{ chat.id }}';
     const ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -941,8 +942,79 @@
         }
     }
     
-    // FIXED: Setup silence detection
-    function setupSilenceDetection(stream) {
+    // FIXED: Setup silence detection with WebRTC VAD
+    async function setupSilenceDetection(stream) {
+        try {
+            // Initialize WebRTC VAD
+            const VAD = window.VAD;
+            const myvad = await VAD.MicVAD.new({
+                onSpeechStart: () => {
+                    consecutiveSilenceChecks = 0;
+                    
+                    if (!userIsSpeaking) {
+                        userIsSpeaking = true;
+                        
+                        if (!currentMessageTempId) {
+                            currentMessageTempId = 'temp_' + Date.now();
+                            currentMessageHasGoodText = false;
+                            
+                            displayMessage({
+                                id: currentMessageTempId,
+                                role: 'user',
+                                original_text: '🎤 Listening...',
+                                status: 'transcribing'
+                            });
+                            console.log('🎤 Speech started (WebRTC VAD)');
+                        }
+                    }
+                    
+                    if (silenceTimerInterval) {
+                        stopSilenceTimer();
+                    }
+                },
+                onSpeechEnd: () => {
+                    if (userIsSpeaking && !isProcessingAudio) {
+                        console.log(`⏸️ Speech ended - auto-sending ${recordingChunks.length} chunks`);
+                        autoSendAudio();
+                        userIsSpeaking = false;
+                        consecutiveSilenceChecks = 0;
+                    }
+                },
+                onFrameProcessed: (probs) => {
+                    // Track silence for fallback timer
+                    if (probs.isSpeech < 0.5) {
+                        consecutiveSilenceChecks++;
+                        
+                        // Fallback: auto-send after 5 seconds anyway
+                        if (consecutiveSilenceChecks >= 5 && userIsSpeaking && recordingChunks.length > 0 && !isProcessingAudio) {
+                            console.log(`⏸️ 5 seconds silence (fallback) - auto-sending`);
+                            autoSendAudio();
+                            userIsSpeaking = false;
+                            consecutiveSilenceChecks = 0;
+                        } else if (consecutiveSilenceChecks === 1 && userIsSpeaking) {
+                            startSilenceTimer();
+                        }
+                    } else {
+                        consecutiveSilenceChecks = 0;
+                        if (silenceTimerInterval) {
+                            stopSilenceTimer();
+                        }
+                    }
+                }
+            });
+            
+            myvad.start();
+            console.log('✅ WebRTC VAD initialized successfully');
+            
+        } catch (error) {
+            console.error('WebRTC VAD initialization failed:', error);
+            console.log('Falling back to RMS-based detection');
+            setupRMSDetection(stream);
+        }
+    }
+    
+    // Fallback: RMS-based detection if WebRTC VAD fails
+    function setupRMSDetection(stream) {
         audioContext = new AudioContext();
         analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
@@ -952,61 +1024,59 @@
         const bufferLength = analyser.fftSize;
         dataArray = new Uint8Array(bufferLength);
         
-        monitorAudioLevel();
-    }
-    
-    // FIXED: Monitor audio level
-    function monitorAudioLevel() {
-        if (!isSessionActive || !analyser || !dataArray) return;
-        
-        analyser.getByteTimeDomainData(dataArray);
-        
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-            const normalized = (dataArray[i] - 128) / 128;
-            sum += normalized * normalized;
-        }
-        const rms = Math.sqrt(sum / dataArray.length);
-        
-        if (rms > SILENCE_THRESHOLD) {
-            consecutiveSilenceChecks = 0;
-            
-            if (!userIsSpeaking) {
-                userIsSpeaking = true;
-                
-                if (!currentMessageTempId) {
-                    currentMessageTempId = 'temp_' + Date.now();
-                    currentMessageHasGoodText = false;
-                    
-                    displayMessage({
-                        id: currentMessageTempId,
-                        role: 'user',
-                        original_text: '🎤 Listening...',
-                        status: 'transcribing'
-                    });
-                }
+        const monitorSilence = setInterval(() => {
+            if (!isSessionActive) {
+                clearInterval(monitorSilence);
+                return;
             }
             
-            if (silenceTimerInterval) {
-                stopSilenceTimer();
-            }
-        } else {
-            consecutiveSilenceChecks++;
+            analyser.getByteTimeDomainData(dataArray);
             
-            // FIXED: Only auto-send if we have good audio and aren't already processing
-            if (consecutiveSilenceChecks >= SILENCE_CHECKS_NEEDED && userIsSpeaking) {
-                if (recordingChunks.length > 0 && !isProcessingAudio) {
-                    autoSendAudio();
-                }
-                userIsSpeaking = false;
-                // FIXED: Don't reset temp ID here - let autoSendAudio handle it
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                const normalized = (dataArray[i] - 128) / 128;
+                sum += normalized * normalized;
+            }
+            const rms = Math.sqrt(sum / dataArray.length);
+            
+            console.log(`Audio RMS: ${rms.toFixed(4)}, Speaking: ${userIsSpeaking}`);
+            
+            if (rms > SILENCE_THRESHOLD) {
                 consecutiveSilenceChecks = 0;
-            } else if (consecutiveSilenceChecks === 1) {
-                startSilenceTimer();
+                
+                if (!userIsSpeaking) {
+                    userIsSpeaking = true;
+                    
+                    if (!currentMessageTempId) {
+                        currentMessageTempId = 'temp_' + Date.now();
+                        currentMessageHasGoodText = false;
+                        
+                        displayMessage({
+                            id: currentMessageTempId,
+                            role: 'user',
+                            original_text: '🎤 Listening...',
+                            status: 'transcribing'
+                        });
+                        console.log('🎤 Speech started (RMS fallback)');
+                    }
+                }
+                
+                if (silenceTimerInterval) {
+                    stopSilenceTimer();
+                }
+            } else {
+                consecutiveSilenceChecks++;
+                
+                if (consecutiveSilenceChecks >= 5 && userIsSpeaking && recordingChunks.length > 0 && !isProcessingAudio) {
+                    console.log(`⏸️ 5 seconds silence - auto-sending`);
+                    autoSendAudio();
+                    userIsSpeaking = false;
+                    consecutiveSilenceChecks = 0;
+                } else if (consecutiveSilenceChecks === 1 && userIsSpeaking) {
+                    startSilenceTimer();
+                }
             }
-        }
-        
-        setTimeout(monitorAudioLevel, CHECK_INTERVAL);
+        }, 1000);
     }
     
     function startSilenceTimer() {
