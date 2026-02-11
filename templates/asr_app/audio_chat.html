@@ -863,10 +863,16 @@
         };
         reader.readAsDataURL(blob);
         
-        // For final send only
+        // For final send only - finalize message and reset for next one
         if (!isContinuous) {
             silenceDetectionTimeout = null;
             stopSilenceTimer();
+            // Reset message tracking for next speech burst
+            currentMessageTempId = null;
+            currentMessageHasGoodText = false;
+            speechChecksInWindow = 0;
+            totalChecksInWindow = 0;
+            console.log('✅ Message finalized - ready for next speech burst');
         }
     }
     

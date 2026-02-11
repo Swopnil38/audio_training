@@ -185,8 +185,10 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     # Database operations
     
     def combine_audio_chunks(self, audio_chunks):
-        """Combine multiple base64 audio chunks into one"""
+        """Combine multiple base64 audio chunks into one proper WAV file"""
         import base64
+        import io
+        import wave
         
         if not audio_chunks:
             return ""
@@ -194,19 +196,58 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         if len(audio_chunks) == 1:
             return audio_chunks[0]
         
-        # Decode all chunks
-        decoded = [base64.b64decode(chunk) for chunk in audio_chunks]
-        
-        # For WAV files, skip header (44 bytes) for chunks after the first
-        combined = decoded[0]
-        for chunk in decoded[1:]:
-            if len(chunk) > 44:
-                combined += chunk[44:]  # Skip WAV header
-            else:
-                combined += chunk
-        
-        # Re-encode as base64
-        return base64.b64encode(combined).decode('utf-8')
+        try:
+            # Decode all chunks
+            decoded = [base64.b64decode(chunk) for chunk in audio_chunks]
+            
+            # Read all WAV files and combine audio data
+            combined_frames = []
+            sample_rate = None
+            channels = None
+            sample_width = None
+            
+            for chunk_data in decoded:
+                try:
+                    with wave.open(io.BytesIO(chunk_data), 'rb') as wav_file:
+                        # Get WAV parameters from first chunk
+                        if sample_rate is None:
+                            channels = wav_file.getnchannels()
+                            sample_width = wav_file.getsampwidth()
+                            sample_rate = wav_file.getframerate()
+                        
+                        # Read and accumulate frames
+                        frames = wav_file.readframes(wav_file.getnframes())
+                        combined_frames.append(frames)
+                except Exception as e:
+                    logger.warning(f"Error reading WAV chunk: {e}, skipping")
+                    continue
+            
+            if not combined_frames:
+                logger.warning("No valid WAV chunks to combine")
+                return audio_chunks[0]
+            
+            # Create new WAV file with combined audio
+            output = io.BytesIO()
+            with wave.open(output, 'wb') as wav_file:
+                wav_file.setnchannels(channels)
+                wav_file.setsampwidth(sample_width)
+                wav_file.setframerate(sample_rate)
+                wav_file.writeframes(b''.join(combined_frames))
+            
+            # Return combined audio as base64
+            combined_data = output.getvalue()
+            return base64.b64encode(combined_data).decode('utf-8')
+            
+        except Exception as e:
+            logger.error(f"Error combining audio chunks: {e}, falling back to simple concat")
+            # Fallback: simple concatenation
+            combined = decoded[0]
+            for chunk in decoded[1:]:
+                if len(chunk) > 44:
+                    combined += chunk[44:]
+                else:
+                    combined += chunk
+            return base64.b64encode(combined).decode('utf-8')
     
     @database_sync_to_async
     def user_has_access(self):
