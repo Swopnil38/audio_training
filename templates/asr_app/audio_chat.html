@@ -436,6 +436,7 @@
     let consecutiveSilenceChecks = 0;
     let continuousSendInterval = null;
     let speechDetectedSinceLastSend = false;
+    let currentMessageTempId = null; // Track message for continuous sends
     
     // Voice Activity Detection thresholds
     const SPEECH_THRESHOLD = 40;    // If level > 40, it's speech
@@ -653,6 +654,7 @@
                     continuousSendInterval = null;
                     console.log('Stopped continuous send');
                 }
+                currentMessageTempId = null; // Reset for next message
                 consecutiveSilenceChecks = 0;
             } else if (consecutiveSilenceChecks === 1) {
                 // Just started silence
@@ -698,6 +700,7 @@
             consecutiveSilenceChecks = 0;
             lastSpeechTime = Date.now();
             speechDetectedSinceLastSend = false;
+            currentMessageTempId = null;
             
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) {
@@ -754,18 +757,35 @@
         recordingChunks = []; // Clear for next batch
         consecutiveSilenceChecks = 0; // Reset for next pause detection
         
-        // Create a temporary message with pending status (only for first send)
+        // Handle message ID tracking
         let tempId = null;
-        if (!isContinuous) {
-            // Final send - create new message
-            tempId = 'msg-' + Date.now();
-            const tempMsg = {
-                id: tempId,
-                role: 'user',
-                original_text: '(Sending audio...)',
-                status: 'pending'
-            };
-            displayMessage(tempMsg);
+        if (isContinuous) {
+            // Continuous send - create message on first send
+            if (!currentMessageTempId) {
+                currentMessageTempId = 'msg-' + Date.now();
+                const tempMsg = {
+                    id: currentMessageTempId,
+                    role: 'user',
+                    original_text: '(Transcribing...)',
+                    status: 'transcribing'
+                };
+                displayMessage(tempMsg);
+            }
+            tempId = currentMessageTempId;
+        } else {
+            // Final send - create new message (or use existing if already created by continuous)
+            if (!currentMessageTempId) {
+                tempId = 'msg-' + Date.now();
+                const tempMsg = {
+                    id: tempId,
+                    role: 'user',
+                    original_text: '(Sending audio...)',
+                    status: 'pending'
+                };
+                displayMessage(tempMsg);
+            } else {
+                tempId = currentMessageTempId;
+            }
         }
         
         const reader = new FileReader();
@@ -782,8 +802,8 @@
                 socket.send(JSON.stringify(message));
                 console.log(`✅ Audio sent - temp_id: ${tempId}`);
                 
-                // Update message status if this is the first send
-                if (tempId) {
+                // Update message status for continuous send
+                if (isContinuous && tempId) {
                     const msgEl = document.getElementById(tempId);
                     if (msgEl) {
                         const statusEl = msgEl.querySelector('.message-status');
