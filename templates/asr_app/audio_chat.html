@@ -748,13 +748,11 @@
 
 {% block extra_js %}
 <script>
-    // Load VAD script dynamically with proper error handling
+    // Load VAD script dynamically (optional enhancement)
+    // Currently using RMS-based detection which is reliable
     const vadScript = document.createElement('script');
-    vadScript.src = 'https://cdn.jsdelivr.net/gh/ricky0123/vad-js@main/dist/index.min.js';
+    vadScript.src = 'https://unpkg.com/@ricky0123/vad-js@0.0.13/dist/index.min.js';
     vadScript.async = true;
-    vadScript.onerror = () => {
-        console.error('❌ Failed to load VAD from CDN');
-    };
     document.head.appendChild(vadScript);
 </script>
 
@@ -966,88 +964,11 @@
         }
     }
     
-    // FIXED: Setup silence detection with WebRTC VAD (with script loading wait)
-    async function setupSilenceDetection(stream) {
-        // Wait for VAD script to load
-        let retries = 0;
-        while (!window.VAD && retries < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            retries++;
-        }
-        
-        if (!window.VAD) {
-            console.error('❌ VAD library failed to load from CDN');
-            console.log('Falling back to RMS-based detection');
-            setupRMSDetection(stream);
-            return;
-        }
-        
-        try {
-            // Initialize WebRTC VAD
-            const myvad = await window.VAD.MicVAD.new({
-                onSpeechStart: () => {
-                    consecutiveSilenceChecks = 0;
-                    
-                    if (!userIsSpeaking) {
-                        userIsSpeaking = true;
-                        
-                        if (!currentMessageTempId) {
-                            currentMessageTempId = 'temp_' + Date.now();
-                            currentMessageHasGoodText = false;
-                            
-                            displayMessage({
-                                id: currentMessageTempId,
-                                role: 'user',
-                                original_text: '🎤 Listening...',
-                                status: 'transcribing'
-                            });
-                            console.log('🎤 Speech started (WebRTC VAD)');
-                        }
-                    }
-                    
-                    if (silenceTimerInterval) {
-                        stopSilenceTimer();
-                    }
-                },
-                onSpeechEnd: () => {
-                    if (userIsSpeaking && !isProcessingAudio) {
-                        console.log(`⏸️ Speech ended - auto-sending ${recordingChunks.length} chunks`);
-                        autoSendAudio();
-                        userIsSpeaking = false;
-                        consecutiveSilenceChecks = 0;
-                    }
-                },
-                onFrameProcessed: (probs) => {
-                    // Track silence for fallback timer
-                    if (probs.isSpeech < 0.5) {
-                        consecutiveSilenceChecks++;
-                        
-                        // Fallback: auto-send after 5 seconds anyway
-                        if (consecutiveSilenceChecks >= 5 && userIsSpeaking && recordingChunks.length > 0 && !isProcessingAudio) {
-                            console.log(`⏸️ 5 seconds silence (fallback) - auto-sending`);
-                            autoSendAudio();
-                            userIsSpeaking = false;
-                            consecutiveSilenceChecks = 0;
-                        } else if (consecutiveSilenceChecks === 1 && userIsSpeaking) {
-                            startSilenceTimer();
-                        }
-                    } else {
-                        consecutiveSilenceChecks = 0;
-                        if (silenceTimerInterval) {
-                            stopSilenceTimer();
-                        }
-                    }
-                }
-            });
-            
-            myvad.start();
-            console.log('✅ WebRTC VAD initialized successfully');
-            
-        } catch (error) {
-            console.error('WebRTC VAD initialization failed:', error);
-            console.log('Falling back to RMS-based detection');
-            setupRMSDetection(stream);
-        }
+    // Setup silence detection - RMS-based with optional VAD enhancement
+    function setupSilenceDetection(stream) {
+        // Use RMS-based detection (reliable and always available)
+        console.log('📊 Using RMS-based voice activity detection');
+        setupRMSDetection(stream);
     }
     
     // Fallback: RMS-based detection if WebRTC VAD fails
