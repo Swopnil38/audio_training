@@ -37,7 +37,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
-        # Verify user has access to this chat (skip for unified chat)
+        # Verify user has access to this chat
         if await self.user_has_access():
             await self.accept()
             logger.info(f"User {self.user.username} connected to chat {self.chat_id}")
@@ -159,8 +159,14 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     def get_or_create_unified_chat(self):
         """Get or create a unified chat for the current user"""
         from .models import AudioChat
+        # Resolve the lazy user object
+        user = self.user
+        if hasattr(user, '_wrapped'):
+            # It's a lazy object, force evaluation
+            user = user._wrapped
+        
         chat, created = AudioChat.objects.get_or_create(
-            user=self.user,
+            user=user,
             title='Unified Chat',
             defaults={
                 'source_language': 'mixed',
@@ -169,7 +175,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             }
         )
         if created:
-            logger.info(f"Created unified chat {chat.id} for user {self.user.username}")
+            logger.info(f"Created unified chat {chat.id} for user {user.username}")
         return chat
     
     async def chat_update(self, event):
