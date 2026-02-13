@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 220 15% 7%;
+    --foreground: 210 20% 95%;
+    --card: 220 14% 10%;
+    --card-foreground: 210 20% 95%;
+    --popover: 220 14% 10%;
+    --popover-foreground: 210 20% 95%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 220 15% 7%;
+    --secondary: 220 12% 15%;
+    --secondary-foreground: 210 15% 80%;
+    --muted: 220 12% 13%;
+    --muted-foreground: 215 10% 50%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 220 15% 7%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 20% 95%;
+    --border: 220 12% 18%;
+    --input: 220 12% 18%;
+    --ring: 199 89% 48%;
+    --chart-1: 199 89% 48%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.75rem;
+    --sidebar-background: 220 14% 10%;
+    --sidebar-foreground: 210 20% 95%;
+    --sidebar-primary: 199 89% 48%;
+    --sidebar-primary-foreground: 220 15% 7%;
+    --sidebar-accent: 220 12% 15%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 220 12% 18%;
+    --sidebar-ring: 199 89% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+}
+
+@keyframes waveform {
+  0%, 100% {
+    height: 4px;
+  }
+  50% {
+    height: var(--wave-height, 24px);
+  }
+}

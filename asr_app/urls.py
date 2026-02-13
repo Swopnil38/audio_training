@@ -13,11 +13,11 @@ router.register(r'jobs', views.TranscriptionJobViewSet, basename='jobs')
 
 urlpatterns = [
     # Template views
-    path('', views.UploadView.as_view(), name='upload'),
-    path('list/', views.AudioListView.as_view(), name='audiofile-list'),
-    path('editor/<uuid:audio_id>/', views.EditorView.as_view(), name='editor'),
-    path('chat/<uuid:chat_id>/', views.AudioChatView.as_view(), name='audio-chat'),
-    path('chats/', views.AudioChatsListView.as_view(), name='chats-list'),
+    # path('', views.UploadView.as_view(), name='upload'),
+    # path('list/', views.AudioListView.as_view(), name='audiofile-list'),
+    # path('editor/<uuid:audio_id>/', views.EditorView.as_view(), name='editor'),
+    # path('chat/<uuid:chat_id>/', views.AudioChatView.as_view(), name='audio-chat'),
+    # path('chats/', views.AudioChatsListView.as_view(), name='chats-list'),
     
     # API endpoints
     path('api/', include(router.urls)),

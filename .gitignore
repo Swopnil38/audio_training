@@ -2,3 +2,10 @@
 venv/
 *venv/
 __pycache__/
+
+
+ui/.next/
+ui/node_modules/
+
+*ui/.next/
+*ui/node_modules/
