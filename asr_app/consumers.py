@@ -16,17 +16,18 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     """WebSocket consumer for real-time audio chat with pause detection"""
     
     async def connect(self):
-        """Handle WebSocket connection"""
-        # Support both unified chat and chat_id-specific chats
-        url_kwargs = self.scope['url_route'].get('kwargs', {})
+        """Handle WebSocket connection - allows anonymous users to shared unified chat"""
         self.user = self.scope['user']
         
-        # If chat_id provided, use it; otherwise use unified chat
+        # Support both unified chat and chat_id-specific chats
+        url_kwargs = self.scope['url_route'].get('kwargs', {})
+        
+        # If chat_id provided, use it; otherwise use shared unified chat
         if 'chat_id' in url_kwargs:
             self.chat_id = url_kwargs.get('chat_id')
         else:
-            # Get or create unified chat for this user
-            unified_chat = await self.get_or_create_unified_chat()
+            # Get or create a single shared unified chat for all users
+            unified_chat = await self.get_or_create_shared_unified_chat()
             self.chat_id = str(unified_chat.id)
         
         self.chat_group_name = f'audio_chat_{self.chat_id}'
@@ -37,10 +38,11 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
-        # Verify user has access to this chat
-        if await self.user_has_access():
+        # Verify user has access to this chat (skip for unified chat or if authenticated)
+        if self.chat_id == str(await self.get_shared_unified_chat_id()) or await self.user_has_access():
             await self.accept()
-            logger.info(f"User {self.user.username} connected to chat {self.chat_id}")
+            user_info = self.user.username if self.user.is_authenticated else "anonymous"
+            logger.info(f"User {user_info} connected to chat {self.chat_id}")
         else:
             logger.warning(f"User {self.user.username} denied access to chat {self.chat_id}")
             await self.close()
@@ -156,17 +158,25 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         }))
     
     @database_sync_to_async
-    def get_or_create_unified_chat(self):
-        """Get or create a unified chat for the current user"""
+    def get_or_create_shared_unified_chat(self):
+        """Get or create a single shared unified chat for all users (authenticated and anonymous)"""
         from .models import AudioChat
-        # Resolve the lazy user object
-        user = self.user
-        if hasattr(user, '_wrapped'):
-            # It's a lazy object, force evaluation
-            user = user._wrapped
+        from django.contrib.auth import get_user_model
+        
+        User = get_user_model()
+        
+        # Use a system user or create one for the shared chat
+        system_user, _ = User.objects.get_or_create(
+            username='system',
+            defaults={
+                'email': 'system@chitrakalastudio.art',
+                'is_staff': False,
+                'is_superuser': False
+            }
+        )
         
         chat, created = AudioChat.objects.get_or_create(
-            user=user,
+            user=system_user,
             title='Unified Chat',
             defaults={
                 'source_language': 'mixed',
@@ -175,8 +185,22 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             }
         )
         if created:
-            logger.info(f"Created unified chat {chat.id} for user {user.username}")
+            logger.info(f"Created shared unified chat {chat.id}")
         return chat
+    
+    @database_sync_to_async
+    def get_shared_unified_chat_id(self):
+        """Get the ID of the shared unified chat"""
+        from .models import AudioChat
+        from django.contrib.auth import get_user_model
+        
+        User = get_user_model()
+        system_user = User.objects.filter(username='system').first()
+        
+        if system_user:
+            chat = AudioChat.objects.filter(user=system_user, title='Unified Chat').first()
+            return str(chat.id) if chat else None
+        return None
     
     async def chat_update(self, event):
         """Handle chat update event"""
