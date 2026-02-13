@@ -45,18 +45,32 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         )
         logger.info(f"User {self.user.username} disconnected from chat {self.chat_id}")
     
-    async def receive(self, text_data):
-        """Receive message from WebSocket"""
+    async def receive(self, text_data=None, bytes_data=None):
+        """Receive message from WebSocket - handles both text and binary data"""
         try:
-            data = json.loads(text_data)
-            message_type = data.get('type')
+            # Handle text data (JSON messages)
+            if text_data:
+                data = json.loads(text_data)
+                message_type = data.get('type')
+                
+                if message_type == 'audio_message':
+                    await self.handle_audio_message(data)
+                elif message_type == 'settings_update':
+                    await self.handle_settings_update(data)
+                else:
+                    logger.warning(f"Unknown message type: {message_type}")
             
-            if message_type == 'audio_message':
-                await self.handle_audio_message(data)
-            elif message_type == 'settings_update':
-                await self.handle_settings_update(data)
-            else:
-                logger.warning(f"Unknown message type: {message_type}")
+            # Handle binary data (raw audio)
+            elif bytes_data:
+                logger.info(f"Received {len(bytes_data)} bytes of audio data")
+                # Binary audio data - convert to base64 and process
+                import base64
+                audio_base64 = base64.b64encode(bytes_data).decode('utf-8')
+                await self.handle_audio_message({
+                    'type': 'audio_message',
+                    'audio': audio_base64,
+                    'language': 'mixed'
+                })
                 
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {str(e)}")
