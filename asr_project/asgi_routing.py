@@ -6,5 +6,6 @@ from django.urls import re_path
 from asr_app.consumers import AudioChatConsumer
 
 websocket_urlpatterns = [
-    re_path(r'ws/audio-chat/(?P<chat_id>[a-f0-9-]+)/$', AudioChatConsumer.as_asgi()),
+    re_path(r'ws/chat/$', AudioChatConsumer.as_asgi()),  # Single unified chatroom
+    re_path(r'ws/audio-chat/(?P<chat_id>[a-f0-9-]+)/$', AudioChatConsumer.as_asgi()),  # Legacy route
 ]

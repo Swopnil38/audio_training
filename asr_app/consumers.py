@@ -17,7 +17,9 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
     
     async def connect(self):
         """Handle WebSocket connection"""
-        self.chat_id = self.scope['url_route']['kwargs']['chat_id']
+        # Support both unified chat and chat_id-specific chats
+        url_kwargs = self.scope['url_route'].get('kwargs', {})
+        self.chat_id = url_kwargs.get('chat_id', 'unified_chat')  # Default to unified chat
         self.user = self.scope['user']
         self.chat_group_name = f'audio_chat_{self.chat_id}'
         
@@ -27,8 +29,8 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
-        # Verify user has access to this chat
-        if await self.user_has_access():
+        # Verify user has access to this chat (skip for unified chat)
+        if self.chat_id == 'unified_chat' or await self.user_has_access():
             await self.accept()
             logger.info(f"User {self.user.username} connected to chat {self.chat_id}")
         else:
