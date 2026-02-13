@@ -19,8 +19,16 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         """Handle WebSocket connection"""
         # Support both unified chat and chat_id-specific chats
         url_kwargs = self.scope['url_route'].get('kwargs', {})
-        self.chat_id = url_kwargs.get('chat_id', 'unified_chat')  # Default to unified chat
         self.user = self.scope['user']
+        
+        # If chat_id provided, use it; otherwise use unified chat
+        if 'chat_id' in url_kwargs:
+            self.chat_id = url_kwargs.get('chat_id')
+        else:
+            # Get or create unified chat for this user
+            unified_chat = await self.get_or_create_unified_chat()
+            self.chat_id = str(unified_chat.id)
+        
         self.chat_group_name = f'audio_chat_{self.chat_id}'
         
         # Join the chat group
@@ -30,7 +38,7 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
         )
         
         # Verify user has access to this chat (skip for unified chat)
-        if self.chat_id == 'unified_chat' or await self.user_has_access():
+        if await self.user_has_access():
             await self.accept()
             logger.info(f"User {self.user.username} connected to chat {self.chat_id}")
         else:
@@ -146,6 +154,23 @@ class AudioChatConsumer(AsyncWebsocketConsumer):
             'type': 'message',
             'data': event
         }))
+    
+    @database_sync_to_async
+    def get_or_create_unified_chat(self):
+        """Get or create a unified chat for the current user"""
+        from .models import AudioChat
+        chat, created = AudioChat.objects.get_or_create(
+            user=self.user,
+            title='Unified Chat',
+            defaults={
+                'source_language': 'mixed',
+                'target_language': 'en',
+                'auto_play_translation': True
+            }
+        )
+        if created:
+            logger.info(f"Created unified chat {chat.id} for user {self.user.username}")
+        return chat
     
     async def chat_update(self, event):
         """Handle chat update event"""
