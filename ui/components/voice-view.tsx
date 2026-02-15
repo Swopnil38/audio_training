@@ -64,14 +64,16 @@ export function VoiceView({
     [playingMessageId, audioUrls]
   )
 
-  // When backend responds (isLoading goes from true -> false), go back to listening
+  // When backend responds (isLoading goes from true -> false), go back to active listening
   useEffect(() => {
     if (!isLoading && status === 'thinking') {
-      setStatus(isListeningRef.current ? 'listening' : 'idle')
+      setStatus('listening')
     }
   }, [isLoading, status])
 
   const isListeningRef = useRef(false)
+  const startListeningRef = useRef<(() => Promise<void>) | null>(null)
+  const manualStopRef = useRef(false)
 
   const handleAudioReady = useCallback(
     (blob: Blob) => {
@@ -101,10 +103,10 @@ export function VoiceView({
     onAudioReady: handleAudioReady,
   })
 
-  // Keep ref in sync
+  // Store startListening in ref for use in useEffect
   useEffect(() => {
-    isListeningRef.current = isListening
-  }, [isListening])
+    startListeningRef.current = startListening
+  }, [startListening])
 
   useEffect(() => {
     if (isListening && !isLoading) {
@@ -116,12 +118,21 @@ export function VoiceView({
 
   const handleToggleListening = async () => {
     if (isListening) {
+      manualStopRef.current = true // Mark as manually stopped
       stopListening()
       setStatus('idle')
     } else {
+      manualStopRef.current = false // Reset when user starts
       await startListening()
       setStatus('listening')
     }
+  }
+
+  const handleCancel = () => {
+    manualStopRef.current = true
+    stopListening()
+    setStatus('idle')
+    setTranscribedText('')
   }
 
   const statusLabel = {
@@ -252,11 +263,11 @@ export function VoiceView({
       <div className="flex flex-col items-center gap-4 px-4 pb-6 pt-4">
         {/* Waveform */}
         <div className="h-14 w-full max-w-sm">
-          {isListening && (
+          {(isListening || status === 'thinking') && (
             <WaveformVisualizer
               audioLevel={audioLevel}
-              isActive={isSpeaking}
-              className="h-full"
+              isActive={isSpeaking && status === 'listening'}
+              className={cn('h-full', status === 'thinking' && 'opacity-50')}
             />
           )}
         </div>
@@ -278,27 +289,33 @@ export function VoiceView({
         {/* Mic button */}
         <button
           onClick={handleToggleListening}
-          disabled={!isConnected || status === 'sending'}
+          disabled={!isConnected}
           className={cn(
             'relative flex h-16 w-16 items-center justify-center rounded-full transition-all',
-            isListening
+            isListening || status === 'thinking'
               ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
               : 'bg-primary text-primary-foreground hover:bg-primary/90',
-            (!isConnected || status === 'sending') && 'opacity-50'
+            !isConnected && 'opacity-50'
           )}
-          aria-label={isListening ? 'Stop listening' : 'Start listening'}
+          aria-label={isListening || status === 'thinking' ? 'Stop listening' : 'Start listening'}
         >
           {/* Pulse rings when listening */}
-          {isListening && (
+          {(isListening || status === 'thinking') && (
             <>
               <span
-                className="absolute inset-0 rounded-full bg-primary/20"
+                className={cn(
+                  'absolute inset-0 rounded-full',
+                  status === 'thinking' ? 'bg-destructive/10' : 'bg-primary/20'
+                )}
                 style={{
                   animation: 'pulse-ring 2s ease-in-out infinite',
                 }}
               />
               <span
-                className="absolute inset-0 rounded-full bg-primary/10"
+                className={cn(
+                  'absolute inset-0 rounded-full',
+                  status === 'thinking' ? 'bg-destructive/5' : 'bg-primary/10'
+                )}
                 style={{
                   animation: 'pulse-ring 2s ease-in-out infinite 0.5s',
                 }}
@@ -306,7 +323,7 @@ export function VoiceView({
             </>
           )}
 
-          {status === 'sending' ? (
+          {status === 'thinking' ? (
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : isListening ? (
             <Square className="h-5 w-5 fill-current" />
@@ -314,6 +331,17 @@ export function VoiceView({
             <Mic className="h-6 w-6" />
           )}
         </button>
+
+        {/* Cancel button - shows when listening or processing */}
+        {(isListening || status === 'thinking') && (
+          <button
+            onClick={handleCancel}
+            className="flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Cancel"
+          >
+            <span>Cancel</span>
+          </button>
+        )}
 
         {error && (
           <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
