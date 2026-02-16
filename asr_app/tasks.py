@@ -35,18 +35,38 @@ def transcribe_audio(audio_path: str) -> dict:
         audio_data = f.read()
 
     # Transcribe using ElevenLabs SDK
-
+    # First detect language to ensure it's English or Nepali
     transcription = elevenlabs.speech_to_text.convert(
         file=BytesIO(audio_data),
         model_id="scribe_v2",
         tag_audio_events=True,
-        language_code=None,  # or set to "nep" for Nepali, "eng" for English, etc.
+        language_code=None,  # Auto-detect first
         diarize=True,
     )
 
     # The SDK returns a SpeechToTextChunkResponseModel object, not a dict
     text = getattr(transcription, "text", "")
-    language = getattr(transcription, "language_code", "unknown")
+    detected_language = getattr(transcription, "language_code", "unknown")
+    
+    # Filter: Only allow English (eng) and Nepali (nep)
+    allowed_languages = ['eng', 'nep', 'en', 'ne']
+    
+    if detected_language and detected_language.lower() not in allowed_languages:
+        logger.warning(f"Language {detected_language} not allowed. Only English and Nepali supported. Retranscribing as English.")
+        # Re-transcribe with English as default fallback
+        with open(audio_path, "rb") as f:
+            audio_data = f.read()
+        transcription = elevenlabs.speech_to_text.convert(
+            file=BytesIO(audio_data),
+            model_id="scribe_v2",
+            tag_audio_events=True,
+            language_code="eng",  # Fallback to English
+            diarize=True,
+        )
+        text = getattr(transcription, "text", "")
+        detected_language = "eng"
+    
+    language = detected_language
 
     # Use librosa to get duration
     audio, sr = librosa.load(audio_path, sr=16000)
@@ -184,8 +204,23 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
             transcription = client.speech_to_text.convert(
                 file=BytesIO(audio_data),
                 model_id="scribe_v2",
-                language_code=None,
+                language_code=None,  # Auto-detect first
             )
+            
+            # Language filtering: Only allow English and Nepali
+            detected_language = getattr(transcription, 'language_code', 'unknown')
+            allowed_languages = ['eng', 'nep', 'en', 'ne']
+            
+            if detected_language and detected_language.lower() not in allowed_languages:
+                logger.warning(f"Detected language {detected_language} not allowed. Retranscribing as English.")
+                # Retry with English as default
+                with open(audio_path, 'rb') as f:
+                    audio_data = f.read()
+                transcription = client.speech_to_text.convert(
+                    file=BytesIO(audio_data),
+                    model_id="scribe_v2",
+                    language_code="eng",  # Force English if language not allowed
+                )
             
             original_text = getattr(transcription, 'text', '') or "[No speech detected]"
             

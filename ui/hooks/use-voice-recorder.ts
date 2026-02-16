@@ -142,6 +142,7 @@ export function useVoiceRecorder({
 
       // Voice Activity Detection loop
       const dataArray = new Uint8Array(analyser.frequencyBinCount)
+      let consecutiveSilenceFrames = 0
 
       const detectVoice = () => {
         if (!analyserRef.current) return
@@ -160,14 +161,15 @@ export function useVoiceRecorder({
         const isSpeakingNow = rms > silenceThreshold
 
         if (isSpeakingNow) {
-          // Require consistent speech detection (3+ frames) before marking as spoken
+          // Require consistent speech detection (2+ frames) before marking as spoken
           speechDetectionCountRef.current++
-          if (speechDetectionCountRef.current > 3) {
+          if (speechDetectionCountRef.current > 2) {
             hasSpokenRef.current = true
           }
           setIsSpeaking(true)
+          consecutiveSilenceFrames = 0
 
-          // Clear silence timer
+          // Clear silence timer on new speech detection
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current)
             silenceTimerRef.current = null
@@ -179,47 +181,56 @@ export function useVoiceRecorder({
             setIsRecording(true)
           }
         } else {
-          // Reset speech detection counter on silence
-          speechDetectionCountRef.current = 0
+          // Increment silence frame counter
+          consecutiveSilenceFrames++
           
-          if (hasSpokenRef.current && !silenceTimerRef.current) {
-            // Start silence timer - if silence continues, stop recording
-            silenceTimerRef.current = setTimeout(() => {
-              setIsSpeaking(false)
-              if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                mediaRecorderRef.current.stop()
-                setIsRecording(false)
-              }
-              silenceTimerRef.current = null
-
-              // Reset for next utterance after a brief pause
-              setTimeout(() => {
-                if (streamRef.current && mediaRecorderRef.current) {
-                  const newRecorderOptions: MediaRecorderOptions = {}
-                  if (mimeType) {
-                    newRecorderOptions.mimeType = mimeType
-                  }
-                  const newRecorder = new MediaRecorder(streamRef.current, newRecorderOptions)
-                  chunksRef.current = []
-
-                  newRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) {
-                      chunksRef.current.push(e.data)
-                    }
-                  }
-                  newRecorder.onstop = () => {
-                    if (chunksRef.current.length > 0 && hasSpokenRef.current) {
-                      const blobType = mimeType || 'audio/webm'
-                      const blob = new Blob(chunksRef.current, { type: blobType })
-                      onAudioReady?.(blob)
-                    }
-                    chunksRef.current = []
-                    hasSpokenRef.current = false
-                  }
-                  mediaRecorderRef.current = newRecorder
+          // Only reset speech detection if silence is continuous (multiple frames)
+          if (consecutiveSilenceFrames > 2) {
+            speechDetectionCountRef.current = 0
+          }
+          
+          // If we've detected speech and now have sustained silence, stop recording
+          if (hasSpokenRef.current && consecutiveSilenceFrames > 8) {
+            if (!silenceTimerRef.current) {
+              // Start silence timer - if silence continues, stop recording
+              silenceTimerRef.current = setTimeout(() => {
+                setIsSpeaking(false)
+                if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                  mediaRecorderRef.current.stop()
+                  setIsRecording(false)
                 }
-              }, 300)
-            }, silenceTimeout)
+                consecutiveSilenceFrames = 0
+                silenceTimerRef.current = null
+
+                // Reset for next utterance after a brief pause
+                setTimeout(() => {
+                  if (streamRef.current && mediaRecorderRef.current) {
+                    const newRecorderOptions: MediaRecorderOptions = {}
+                    if (mimeType) {
+                      newRecorderOptions.mimeType = mimeType
+                    }
+                    const newRecorder = new MediaRecorder(streamRef.current, newRecorderOptions)
+                    chunksRef.current = []
+
+                    newRecorder.ondataavailable = (e) => {
+                      if (e.data.size > 0) {
+                        chunksRef.current.push(e.data)
+                      }
+                    }
+                    newRecorder.onstop = () => {
+                      if (chunksRef.current.length > 0 && hasSpokenRef.current) {
+                        const blobType = mimeType || 'audio/webm'
+                        const blob = new Blob(chunksRef.current, { type: blobType })
+                        onAudioReady?.(blob)
+                      }
+                      chunksRef.current = []
+                      hasSpokenRef.current = false
+                    }
+                    mediaRecorderRef.current = newRecorder
+                  }
+                }, 300)
+              }, silenceTimeout)
+            }
           }
         }
 

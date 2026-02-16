@@ -64,12 +64,25 @@ export function VoiceView({
     [playingMessageId, audioUrls]
   )
 
-  // When backend responds (isLoading goes from true -> false), go back to active listening
+  // When backend responds (isLoading goes from true -> false), auto-restart listening
   useEffect(() => {
     if (!isLoading && status === 'thinking') {
-      setStatus('listening')
+      setStatus('idle')
+      // Auto-restart listening after a brief delay to ensure clean state
+      setTimeout(() => {
+        if (startListeningRef.current) {
+          startListeningRef.current()
+        }
+      }, 300)
     }
   }, [isLoading, status])
+
+  // Auto-stop listening when audio is being sent/processed
+  useEffect(() => {
+    if ((status === 'sending' || status === 'thinking') && isListening) {
+      stopListening()
+    }
+  }, [status, isListening, stopListening])
 
   const isListeningRef = useRef(false)
   const startListeningRef = useRef<(() => Promise<void>) | null>(null)
@@ -98,8 +111,8 @@ export function VoiceView({
     stopListening,
     error,
   } = useVoiceRecorder({
-    silenceThreshold: 0.035,
-    silenceTimeout: 1500,
+    silenceThreshold: 0.02,
+    silenceTimeout: 1200,
     onAudioReady: handleAudioReady,
   })
 
@@ -109,12 +122,10 @@ export function VoiceView({
   }, [startListening])
 
   useEffect(() => {
-    if (isListening && !isLoading) {
+    if (isListening && !isLoading && status === 'idle') {
       setStatus('listening')
-    } else if (isLoading) {
-      setStatus('thinking')
     }
-  }, [isListening, isLoading])
+  }, [isListening, isLoading, status])
 
   const handleToggleListening = async () => {
     if (isListening) {
@@ -263,11 +274,11 @@ export function VoiceView({
       <div className="flex flex-col items-center gap-4 px-4 pb-6 pt-4">
         {/* Waveform */}
         <div className="h-14 w-full max-w-sm">
-          {(isListening || status === 'thinking') && (
+          {(isListening || status === 'thinking' || status === 'sending') && (
             <WaveformVisualizer
               audioLevel={audioLevel}
               isActive={isSpeaking && status === 'listening'}
-              className={cn('h-full', status === 'thinking' && 'opacity-50')}
+              className={cn('h-full', (status === 'thinking' || status === 'sending') && 'opacity-50')}
             />
           )}
         </div>
