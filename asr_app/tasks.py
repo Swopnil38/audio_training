@@ -255,11 +255,20 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
                 # Use streaming to get chunks as they're generated
                 audio_chunks = []
                 chunk_count = 0
+                max_wait_time = 30  # Max 30 seconds to get TTS
+                
+                import time
+                start_time = time.time()
                 
                 for chunk in streaming_service.stream_text_to_speech(original_text):
                     if chunk:
                         audio_chunks.append(chunk)
                         chunk_count += 1
+                    
+                    # Timeout protection
+                    if time.time() - start_time > max_wait_time:
+                        logger.warning(f"TTS streaming timeout for message {message_id}")
+                        break
                 
                 if audio_chunks:
                     # Combine all chunks into final audio file
@@ -282,12 +291,17 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
                                 'translated_audio_url': message.translated_audio.url if message.translated_audio else None
                             }
                         )
+                else:
+                    logger.warning(f"No TTS chunks received for message {message_id}")
+                    
             except Exception as e:
                 logger.error(f"Streaming TTS error: {str(e)}")
+                # Don't crash - TTS is optional, transcription was successful
         
-        # Start TTS streaming in background
+        # Start TTS streaming in background with timeout
         import threading
         tts_thread = threading.Thread(target=generate_streaming_tts, daemon=True)
+        tts_thread.daemon = True
         tts_thread.start()
         
         logger.info(f"Audio message {message_id} processed (streaming in background)")
@@ -304,6 +318,19 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
             message.status = AudioChatMessage.Status.FAILED
             message.error_message = str(e)
             message.save(update_fields=['status', 'error_message'])
+            
+            # Notify client of failure
+            if group_name:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {
+                        'type': 'chat_update',
+                        'message_id': str(message.id),
+                        'status': 'failed',
+                        'error': str(e)
+                    }
+                )
         except Exception:
             pass
         

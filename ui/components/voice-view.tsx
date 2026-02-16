@@ -64,26 +64,6 @@ export function VoiceView({
     [playingMessageId, audioUrls]
   )
 
-  // When backend responds (isLoading goes from true -> false), auto-restart listening
-  useEffect(() => {
-    if (!isLoading && status === 'thinking') {
-      setStatus('idle')
-      // Auto-restart listening after a brief delay to ensure clean state
-      setTimeout(() => {
-        if (startListeningRef.current) {
-          startListeningRef.current()
-        }
-      }, 300)
-    }
-  }, [isLoading, status])
-
-  // Auto-stop listening when audio is being sent/processed
-  useEffect(() => {
-    if ((status === 'sending' || status === 'thinking') && isListening) {
-      stopListening()
-    }
-  }, [status, isListening, stopListening])
-
   const isListeningRef = useRef(false)
   const startListeningRef = useRef<(() => Promise<void>) | null>(null)
   const manualStopRef = useRef(false)
@@ -115,6 +95,26 @@ export function VoiceView({
     silenceTimeout: 1200,
     onAudioReady: handleAudioReady,
   })
+
+  // When backend responds (isLoading goes from true -> false), auto-restart listening
+  useEffect(() => {
+    if (!isLoading && status === 'thinking') {
+      setStatus('idle')
+      // Auto-restart listening after a brief delay to ensure clean state
+      setTimeout(() => {
+        if (startListeningRef.current) {
+          startListeningRef.current()
+        }
+      }, 300)
+    }
+  }, [isLoading, status])
+
+  // Auto-stop listening when audio is being sent/processed
+  useEffect(() => {
+    if ((status === 'sending' || status === 'thinking') && isListening) {
+      stopListening()
+    }
+  }, [status, isListening, stopListening])
 
   // Store startListening in ref for use in useEffect
   useEffect(() => {

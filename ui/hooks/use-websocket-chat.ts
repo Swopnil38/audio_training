@@ -111,6 +111,28 @@ export function useWebSocketChat(options: UseWebSocketChatOptions = {}) {
                 return prev
               })
             }
+          } else if (data.type === 'update' || messageType === 'chat_update') {
+            // Handle chat_update from WebSocket (wrapped as {type: 'update', data: {type: 'chat_update', ...}})
+            const displayText = message.translated_text || message.original_text || message.text
+            
+            if (displayText) {
+              setIsThinking(false)  // Stop the loading spinner when transcription arrives
+              setMessages((prev) => {
+                const lastVoiceIndex = [...prev].reverse().findIndex(
+                  (m) => m.role === 'user' && m.source === 'voice'
+                )
+                if (lastVoiceIndex >= 0) {
+                  const actualIndex = prev.length - 1 - lastVoiceIndex
+                  const updated = [...prev]
+                  updated[actualIndex] = {
+                    ...updated[actualIndex],
+                    text: displayText,
+                  }
+                  return updated
+                }
+                return prev
+              })
+            }
           } else if (messageType === 'message' || messageType === 'response') {
             const responseText =
               message.message ||
@@ -130,19 +152,6 @@ export function useWebSocketChat(options: UseWebSocketChatOptions = {}) {
                   timestamp: new Date(),
                 },
               ])
-            }
-          } else if (messageType === 'chat_update') {
-            // Handle message updates (e.g., translations, status updates)
-            const displayText = message.translated_text || message.original_text || message.text
-            
-            if (displayText && lastAudioMessageIdRef.current) {
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === lastAudioMessageIdRef.current
-                    ? { ...msg, text: displayText }
-                    : msg
-                )
-              )
             }
           } else if (data.type === 'error') {
             setIsThinking(false)
