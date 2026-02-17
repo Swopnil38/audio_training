@@ -53,18 +53,18 @@ def transcribe_audio(audio_path: str) -> dict:
     
     if detected_language and detected_language.lower() not in allowed_languages:
         logger.warning(f"Language {detected_language} not allowed. Only English and Nepali supported. Retranscribing as English.")
-        # Re-transcribe with English as default fallback
+        # Re-transcribe with Nepali as default fallback
         with open(audio_path, "rb") as f:
             audio_data = f.read()
         transcription = elevenlabs.speech_to_text.convert(
             file=BytesIO(audio_data),
             model_id="scribe_v2",
             tag_audio_events=True,
-            language_code="eng",  # Fallback to English
+            language_code="nep",  # Fallback to Nepali
             diarize=True,
         )
         text = getattr(transcription, "text", "")
-        detected_language = "eng"
+        detected_language = "nep"
     
     language = detected_language
 
@@ -212,14 +212,14 @@ def process_audio_message(self, message_id: str, chat_id: str, group_name: str =
             allowed_languages = ['eng', 'nep', 'en', 'ne']
             
             if detected_language and detected_language.lower() not in allowed_languages:
-                logger.warning(f"Detected language {detected_language} not allowed. Retranscribing as English.")
-                # Retry with English as default
+                logger.warning(f"Detected language {detected_language} not allowed. Retranscribing as Nepali.")
+                # Retry with Nepali as default
                 with open(audio_path, 'rb') as f:
                     audio_data = f.read()
                 transcription = client.speech_to_text.convert(
                     file=BytesIO(audio_data),
                     model_id="scribe_v2",
-                    language_code="eng",  # Force English if language not allowed
+                    language_code="nep",  # Force Nepali if language not allowed
                 )
             
             original_text = getattr(transcription, 'text', '') or "[No speech detected]"
